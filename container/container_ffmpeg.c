@@ -1756,7 +1756,7 @@ static int32_t container_ffmpeg_play(Context_t *context)
 static int32_t container_ffmpeg_stop(Context_t *context) 
 {
     int32_t ret = cERR_CONTAINER_FFMPEG_NO_ERROR;
-    int32_t wait_time = 100;
+    int32_t wait_time = 10; // we give 1s to close otherwise we will force close
 
     ffmpeg_printf(10, "\n");
 
@@ -1771,7 +1771,6 @@ static int32_t container_ffmpeg_stop(Context_t *context)
         context->playback->isPlaying = 0;
     }
 
-    wait_time = 100;
     while ( (hasPlayThreadStarted != 0) && (--wait_time) > 0 ) 
     {
         ffmpeg_printf(10, "Waiting for ffmpeg thread to terminate itself, will try another %d times\n", wait_time);
@@ -1780,8 +1779,13 @@ static int32_t container_ffmpeg_stop(Context_t *context)
 
     if (wait_time == 0) 
     {
+        /* force close */
         ffmpeg_err( "Timeout waiting for thread!\n");
         ret = cERR_CONTAINER_FFMPEG_ERR;
+        /* to speed up close - we are in separate process for the moment this process will 
+         * be closed and whole resources will be free by the system  
+         */ 
+        return ret;
     }
 
     hasPlayThreadStarted = 0;
