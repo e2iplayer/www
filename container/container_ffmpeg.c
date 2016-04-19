@@ -141,11 +141,13 @@ static int32_t container_ffmpeg_seek_bytes(off_t pos);
 static int32_t container_ffmpeg_seek(Context_t *context, int64_t sec, uint8_t absolute);
 static int32_t container_ffmpeg_seek_rel(Context_t *context, off_t pos, int64_t pts, int64_t sec);
 static int32_t container_ffmpeg_get_length(Context_t *context, int64_t *length);
+static int64_t calcPts(uint32_t avContextIdx, AVStream *stream, int64_t pts);
 
 /* This is very bad to include source file 
  * and must be corrected in the future
  */
 #include "buff_ffmpeg.c"
+#include "mpeg4p2_ffmpeg.c"
 
 /* This is also bad solution 
  * such configuration should passed maybe 
@@ -470,6 +472,10 @@ static void FFMPEGThread(Context_t *context)
     uint64_t out_channel_layout = AV_CH_LAYOUT_STEREO;
     uint32_t cAVIdx = 0;
 
+    Mpeg4P2Context mpeg4p2_context;
+    memset(&mpeg4p2_context, 0, sizeof(Mpeg4P2Context));
+    AVBitStreamFilterContext *mpeg4p2_bsf_context = av_bitstream_filter_init("mpeg4_unpack_bframes");
+
     ffmpeg_printf(10, "\n");
     while ( context->playback->isCreationPhase )
     {
@@ -563,6 +569,9 @@ static void FFMPEGThread(Context_t *context)
                     break;
                 }
             }
+            mpeg4p2_context_reset(&mpeg4p2_context);
+            av_bitstream_filter_close(mpeg4p2_bsf_context);
+            mpeg4p2_bsf_context = av_bitstream_filter_init("mpeg4_unpack_bframes");
         }
 
         int ffmpegStatus = 0;
@@ -603,31 +612,48 @@ static void FFMPEGThread(Context_t *context)
 
             if (videoTrack && (videoTrack->AVIdx == cAVIdx) && (videoTrack->Id == pid))
             {
-                currentVideoPts = videoTrack->pts = pts = calcPts(cAVIdx, videoTrack->stream, packet.pts);
-                videoTrack->dts = dts = calcPts(cAVIdx, videoTrack->stream, packet.dts);
-
-                if ((currentVideoPts > latestPts) && (currentVideoPts != INVALID_PTS_VALUE))
+                AVCodecContext *codec_context = ((AVStream*)(videoTrack->stream))->codec;
+                if (codec_context->codec_id == AV_CODEC_ID_MPEG4)
                 {
-                    latestPts = currentVideoPts;
+                    // should never happen, if it does print error and exit immediately, so we can easily spot it
+                    if (filter_packet(mpeg4p2_bsf_context, codec_context, &packet) < 0)
+                    {
+                        ffmpeg_err("cannot filter mpegp2 packet\n");
+                        exit(1);
+                    }
+                    if (mpeg4p2_write_packet(context, &mpeg4p2_context, videoTrack, cAVIdx, &currentVideoPts, &latestPts, &packet) < 0)
+                    {
+                        ffmpeg_err("cannot write mpeg4p2 packet\n");
+                        exit(1);
+                    }
                 }
-                
-                ffmpeg_printf(200, "VideoTrack index = %d %lld\n",pid, currentVideoPts);
-
-                avOut.data       = packet.data;
-                avOut.len        = packet.size;
-                avOut.pts        = pts;
-                avOut.dts        = dts;
-                avOut.extradata  = videoTrack->extraData;
-                avOut.extralen   = videoTrack->extraSize;
-                avOut.frameRate  = videoTrack->frame_rate;
-                avOut.timeScale  = videoTrack->TimeScale;
-                avOut.width      = videoTrack->width;
-                avOut.height     = videoTrack->height;
-                avOut.type       = "video";
-
-                if (context->output->video->Write(context, &avOut) < 0)
+                else
                 {
-                    ffmpeg_err("writing data to video device failed\n");
+                    currentVideoPts = videoTrack->pts = pts = calcPts(cAVIdx, videoTrack->stream, packet.pts);
+                    videoTrack->dts = dts = calcPts(cAVIdx, videoTrack->stream, packet.dts);
+
+                    if ((currentVideoPts > latestPts) && (currentVideoPts != INVALID_PTS_VALUE))
+                    {
+                        latestPts = currentVideoPts;
+                    }
+                    ffmpeg_printf(200, "VideoTrack index = %d %lld\n",pid, currentVideoPts);
+
+                    avOut.data       = packet.data;
+                    avOut.len        = packet.size;
+                    avOut.pts        = pts;
+                    avOut.dts        = dts;
+                    avOut.extradata  = videoTrack->extraData;
+                    avOut.extralen   = videoTrack->extraSize;
+                    avOut.frameRate  = videoTrack->frame_rate;
+                    avOut.timeScale  = videoTrack->TimeScale;
+                    avOut.width      = videoTrack->width;
+                    avOut.height     = videoTrack->height;
+                    avOut.type       = "video";
+
+                    if (context->output->video->Write(context, &avOut) < 0)
+                    {
+                        ffmpeg_err("writing data to video device failed\n");
+                    }
                 }
             }
             else if (audioTrack && (audioTrack->AVIdx == cAVIdx) && (audioTrack->Id == pid)) 
@@ -998,6 +1024,9 @@ static void FFMPEGThread(Context_t *context)
 #endif
     }
     
+    mpeg4p2_context_reset(&mpeg4p2_context);
+    av_bitstream_filter_close(mpeg4p2_bsf_context);
+
     hasPlayThreadStarted = 0;
     context->playback->isPlaying = 0;
     PlaybackDieNow(1);
