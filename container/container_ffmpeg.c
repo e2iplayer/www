@@ -118,6 +118,7 @@ static pthread_t PlayThread;
 static int32_t hasPlayThreadStarted = 0;
 
 static AVFormatContext *avContextTab[IPTV_AV_CONTEXT_MAX_NUM] = {NULL, NULL};
+static int32_t use_custom_io[IPTV_AV_CONTEXT_MAX_NUM] = {0, 0};
 static AVDictionary *avio_opts = NULL;
 
 static uint8_t isContainerRunning = 0;
@@ -1041,7 +1042,7 @@ static int32_t terminating = 0;
 static int32_t interrupt_cb(void *ctx)
 {
     PlaybackHandler_t *p = (PlaybackHandler_t *)ctx;
-    return p->abortRequested;
+    return p->abortRequested || PlaybackDieNow(0);
 }
 
 #ifdef SAM_CUSTOM_IO
@@ -1111,6 +1112,7 @@ int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int
         if(avio_ctx)
         {
             avContextTab[AVIdx]->pb = avio_ctx;
+            use_custom_io[AVIdx] = 1;
         }
         else
         {
@@ -1827,6 +1829,17 @@ static int32_t container_ffmpeg_stop(Context_t *context)
     {
         if(NULL != avContextTab[i])
         {
+            if(0 != use_custom_io[i])
+            {
+                /*
+                 * Free custom IO independently to avoid segfault/bus error 
+                 * avformat_close_input do not expect custom io, so it try
+                 * to release incorrectly
+                 */
+                av_freep(&(avContextTab[i]->pb->buffer));
+                av_freep(&(avContextTab[i]->pb));
+                use_custom_io[i] = 0;
+            }
             avformat_close_input(&avContextTab[i]);
             avContextTab[i] = NULL;
         }
