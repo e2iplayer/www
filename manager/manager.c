@@ -94,7 +94,7 @@ void freeTrack(Track_t *track)
         if (track->Name != NULL)
         {
             free(track->Name);
-            track->Name = NULL:
+            track->Name = NULL;
         }
 
         if (track->Encoding != NULL)
