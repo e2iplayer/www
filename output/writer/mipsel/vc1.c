@@ -173,6 +173,9 @@ static int writeData(void* _call)
     PacketLength     += call->len;
     
     iov[0].iov_len = InsertPesHeader(PesHeader, PacketLength, MPEG_VIDEO_PES_START_CODE, call->Pts, 0);
+
+    /* some mipsel receiver(s) like et4x00 needs to have Copy(0)/Original(1) flag set to Original */
+    PesHeader[6] |= 1;
     
     if(needFrameStartCode)
     {
