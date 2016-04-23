@@ -23,6 +23,7 @@
 #define FILLBUFDIFF 1048576
 #define FILLBUFPAKET 5120
 #define FILLBUFSEEKTIME 3 //sec
+#define TIMEOUT_MAX_ITERS 10
 
 static int ffmpeg_buf_size = FILLBUFSIZE + FILLBUFDIFF;
 static ffmpeg_buf_seek_time = FILLBUFSEEKTIME;
@@ -46,6 +47,19 @@ static Context_t *g_context = 0;
 static int64_t playPts = -1;
 static int32_t finishTimeout = 0;
 static int8_t pauseTimeout = 0;
+static int64_t maxInjectedPTS = INVALID_PTS_VALUE;
+
+static int64_t update_max_injected_pts(int64_t pts)
+{
+    if(pts > 0 && pts != INVALID_PTS_VALUE)
+    {
+        if(maxInjectedPTS == INVALID_PTS_VALUE || pts > maxInjectedPTS)
+        {
+            maxInjectedPTS = pts;
+        }
+    }
+    return maxInjectedPTS;
+}
 
 int64_t get_play_pts()
 {
@@ -66,7 +80,7 @@ void set_pause_timeout(uint8_t pause)
 
 static int8_t is_finish_timeout()
 {
-    if (finishTimeout > 10)
+    if (finishTimeout > TIMEOUT_MAX_ITERS)
     {
         return 1;
     }
@@ -77,12 +91,29 @@ static void update_finish_timeout()
 {
     if(0 == pauseTimeout)
     {
+        int64_t maxInjectedPts = update_max_injected_pts(-1);
         int64_t currPts = -1;
         int32_t ret = g_context->playback->Command(g_context, PLAYBACK_PTS, &currPts);
         finishTimeout += 1;
         
-        //printf("ret[%d] playPts[%lld] currPts[%lld]\n", ret, playPts, currPts);
-        if (0 == ret && playPts != currPts)
+        if(maxInjectedPts < 0 || maxInjectedPts == INVALID_PTS_VALUE)
+        {
+            maxInjectedPts = 0;
+        }
+        
+        //printf("ret[%d] playPts[%lld] currPts[%lld] maxInjectedPts[%lld]\n", ret, playPts, currPts, maxInjectedPts);
+        
+        /* On some STBs PTS readed from decoder is invalid after seek or at start 
+         * this is the reason for additional validation when we what to close immediately
+         */
+        if( !progressive_download && 0 == ret && currPts >= maxInjectedPts && 
+            ((currPts - maxInjectedPts) / 90000) < 2 )
+        {
+            /* close immediately 
+             */
+            finishTimeout = TIMEOUT_MAX_ITERS + 1;
+        }
+        else if (0 == ret && (playPts != currPts && maxInjectedPts > currPts))
         {
             playPts = currPts;
             finishTimeout = 0;
@@ -128,7 +159,16 @@ static int32_t ffmpeg_read_wrapper_base(void *opaque, uint8_t *buf, int32_t buf_
 
 static int32_t ffmpeg_read_wrapper(void *opaque, uint8_t *buf, int32_t buf_size)
 {
-    return ffmpeg_read_wrapper_base(opaque, buf, buf_size, 0);
+    if(progressive_download)
+    {
+        return ffmpeg_read_wrapper_base(opaque, buf, buf_size, 0);
+    }
+    else
+    {
+        /* at start it was progressive playback, but dwonload, finished
+         */
+        return ffmpeg_real_read_org(opaque, buf, buf_size);
+    }
 }
 
 static int32_t ffmpeg_read_wrapper2(void *opaque, uint8_t *buf, int32_t buf_size)

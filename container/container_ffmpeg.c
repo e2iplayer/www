@@ -144,6 +144,16 @@ static int32_t container_ffmpeg_seek_rel(Context_t *context, off_t pos, int64_t 
 static int32_t container_ffmpeg_get_length(Context_t *context, int64_t *length);
 static int64_t calcPts(uint32_t avContextIdx, AVStream *stream, int64_t pts);
 
+/* Progressive playback means that we play local file
+ * but this local file can grows up, for example 
+ * we start playback before download was finished 
+ */
+static int32_t progressive_download = 0;
+void progressive_download_set(int32_t val)
+{
+    progressive_download = val;
+}
+
 /* This is very bad to include source file 
  * and must be corrected in the future
  */
@@ -627,6 +637,7 @@ static void FFMPEGThread(Context_t *context)
                         ffmpeg_err("cannot write mpeg4p2 packet\n");
                         exit(1);
                     }
+                    update_max_injected_pts(latestPts);
                 }
                 else
                 {
@@ -636,6 +647,7 @@ static void FFMPEGThread(Context_t *context)
                     if ((currentVideoPts > latestPts) && (currentVideoPts != INVALID_PTS_VALUE))
                     {
                         latestPts = currentVideoPts;
+                        update_max_injected_pts(latestPts);
                     }
                     ffmpeg_printf(200, "VideoTrack index = %d %lld\n",pid, currentVideoPts);
 
@@ -664,6 +676,7 @@ static void FFMPEGThread(Context_t *context)
                 if ((currentAudioPts > latestPts) && (!videoTrack))
                 {
                     latestPts = currentAudioPts;
+                    update_max_injected_pts(latestPts);
                 }
                 
                 pcmPrivateData_t pcmExtradata;
@@ -1218,7 +1231,7 @@ int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int
                 }
             }
         }
-        else
+        else if (progressive_download)
         {
             avContextTab[AVIdx]->pb->read_packet = ffmpeg_read_wrapper;
         }

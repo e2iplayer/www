@@ -44,6 +44,7 @@ extern void pcm_resampling_set(int32_t val);
 extern void wma_software_decoder_set(int32_t val);
 extern void ac3_software_decoder_set(int32_t val);
 extern void eac3_software_decoder_set(int32_t val);
+extern void progressive_download_set(int32_t val);
 
 
 
@@ -242,7 +243,7 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
     int digit_optind = 0;
     int aopt = 0, bopt = 0;
     char *copt = 0, *dopt = 0;
-    while ( (c = getopt(argc, argv, "wae3dlsrix:u:c:h:p:t:")) != -1) 
+    while ( (c = getopt(argc, argv, "wae3dlsrix:u:c:h:o:p:t:")) != -1) 
     {
         switch (c) 
         {
@@ -277,6 +278,10 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
         case 'r':
             printf("Software decoder do not use PCM resampling\n");
             pcm_resampling_set(0);
+            break;
+        case 'o':
+            printf("Set progressive download to %d\n", atoi(optarg));
+            progressive_download_set(atoi(optarg));
             break;
         case 'p':
             SetNice(atoi(optarg));
@@ -340,17 +345,20 @@ int main(int argc, char* argv[])
     memset(argvBuff, '\0', sizeof(argvBuff));
     int commandRetVal = -1;
     /* inform client that we can handle additional commands */
-    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 25);
+    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 24);
 
     if (0 != ParseParams(argc, argv, file, audioFile, &audioTrackIdx))
     {
         printf("Usage: exteplayer3 filePath [-u user-agent] [-c cookies] [-h headers] [-p prio] [-a] [-d] [-w] [-l] [-s] [-i] [-t audioTrackId] [-x separateAudioUri] plabackUri\n");
         printf("[-a] AAC software decoding\n");
+        printf("[-e] EAC3 software decoding\n");
+        printf("[-3] AC3 software decoding\n");
         printf("[-d] DTS software decoding\n");
         printf("[-w] WMA1, WMA2, WMA/PRO software decoding\n");
         printf("[-l] software decoder use LPCM for injection (otherwise wav PCM will be used)\n");
         printf("[-s] software decoding as stereo [downmix]\n");
         printf("[-i] play in infinity loop\n");
+        printf("[-o 0|1] set progressive download\n");
         printf("[-p value] nice value\n");
         printf("[-t id] audio track ID switched on at start\n");
         printf("[-h headers] set custom HTTP headers \"Name: value\\r\\nName: value\\r\\n\"\n");
@@ -467,6 +475,16 @@ int main(int argc, char* argv[])
 
                 commandRetVal = g_player->playback->Command(g_player, PLAYBACK_SLOWMOTION, &speed);
                 fprintf(stderr, "{\"PLAYBACK_SLOWMOTION\":{\"speed\":%d, \"sts\":%d}}\n", speed, commandRetVal);
+                break;
+            }
+            case 'o':
+            {
+                int flags = 0;
+                if( 1 == sscanf(argvBuff+1, "%d", &flags) )
+                {
+                    progressive_download_set(flags);
+                    fprintf(stderr, "{\"PROGRESSIVE_DOWNLOAD\":{\"flags\":%d, \"sts\":0}}\n", flags);
+                }
                 break;
             }
             case 'f':
