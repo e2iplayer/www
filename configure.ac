@@ -1,0 +1,11 @@
+AC_INIT(exteplayer3,1.0)
+AM_INIT_AUTOMAKE(exteplayer3,1.0)
+
+AC_PROG_CC
+AC_PROG_CXX
+AM_PROG_LIBTOOL
+AC_CONFIG_MACRO_DIR([m4])
+
+AC_OUTPUT([
+Makefile
+])
