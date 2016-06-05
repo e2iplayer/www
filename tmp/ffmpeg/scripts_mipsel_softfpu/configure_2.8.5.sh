@@ -7,10 +7,9 @@
 --enable-cross-compile \
 --target-os=linux \
 --arch=mipsel \
---disable-mipsdsp \
+--disable-mipsdspr1 \
 --disable-mipsdspr2 \
 --disable-mipsfpu \
---enable-pic \
 --enable-shared \
 --disable-static \
 --disable-debug \
@@ -39,6 +38,7 @@
 --extra-cflags=" $FFMPEG_CFLAGS " \
 --extra-ldflags=" $FFMPEG_LDFLAGS "
 
+#--extra-cflags=" -g" \
 #--disable-optimizations \
 #--disable-mmx \
 #--disable-stripping 

@@ -5,7 +5,7 @@ set -e
 function usage {
    echo "Usage:"
    echo "$0 platform ffmpeg_ver"
-   echo "platform:       mipsel | armv7 | armv5t"
+   echo "platform:       mipsel | mipsel_softfpu | armv7 | armv5t"
    echo "ffmpeg_ver:     2.8.5 | 3.0"
    exit 1
 }
@@ -18,9 +18,9 @@ fi
 EPLATFORM=$1
 FFMPEG_VERSION=$2
 
-if [ "$EPLATFORM" != "mipsel" -a "$EPLATFORM" != "armv7" -a "$EPLATFORM" != "armv5t" ];
+if [ "$EPLATFORM" != "mipsel" -a "$EPLATFORM" != "mipsel_softfpu" -a "$EPLATFORM" != "armv7" -a "$EPLATFORM" != "armv5t" ];
 then
-    echo "Please give supported platform (mipsel|armv7|armv5t) version!"
+    echo "Please give supported platform (mipsel|mipsel_softfpu|armv7|armv5t) version!"
     usage
 fi
 
@@ -36,7 +36,16 @@ case "$EPLATFORM" in
         export TOOLCHAIN_NAME="mipsel-oe-linux"
         export PATH=$BASE_PATH"i686-linux/usr/bin/mipsel-oe-linux/":$PATH
         export SYSROOT=$BASE_PATH"et4x00"
-        CFLAGS=""
+        CFLAGS="  -mel -mabi=32 -march=mips32 "
+        FFMPEG_CFLAGS=" -mel -mabi=32 -march=mips32 "
+        ;;
+    mipsel_softfpu)
+        BASE_PATH="/mnt/new2/softFPU/openpli/build/tmp/sysroots/"
+        export TOOLCHAIN_NAME="mipsel-oe-linux"
+        export PATH=$BASE_PATH"i686-linux/usr/bin/mipsel-oe-linux/":$PATH
+        export SYSROOT=$BASE_PATH"et4x00"
+        CFLAGS="  -mel -mabi=32 -msoft-float -march=mips32 "
+        FFMPEG_CFLAGS=" -mel -mabi=32 -msoft-float -march=mips32 "
         ;;
     armv7)
         BASE_PATH="/mnt/new2/vusolo4k/openvuplus_3.0/build/vusolo4k/tmp/sysroots/"
@@ -124,7 +133,7 @@ function buildFFmpeg
         
         CONFIGURE_PATH=$FFMPEG_BASE_PATH"/scripts_$EPLATFORM/configure_"$FFMPEG_VERSION".sh"
         
-        $FFMPEG_BASE_PATH"/scripts_$EPLATFORM/make.sh" $FFMPEG_PATH $CONFIGURE_PATH $SYSROOT
+        $FFMPEG_BASE_PATH"/scripts_$EPLATFORM/make.sh" $FFMPEG_PATH $CONFIGURE_PATH $SYSROOT "$FFMPEG_CFLAGS"
     else
         #CONFIGURE_PATH=$FFMPEG_BASE_PATH"/scripts_$EPLATFORM/configure_"$FFMPEG_VERSION".sh"
         #$FFMPEG_BASE_PATH"/scripts_$EPLATFORM/make.sh" $FFMPEG_PATH $CONFIGURE_PATH $SYSROOT
@@ -149,6 +158,7 @@ cd  $FFMPEG_PACK_TMP
 rm -Rf usr/include
 rm -Rf usr/share
 rm -Rf usr/lib/pk*
-tar -zcvf $FFMPEG_PACK_TMP.tar.gz usr
+echo ">>>>>>>>>>>>>>>>>>>>>>"
+tar -zcvf ../ffmpeg"$FFMPEG_VERSION"_$EPLATFORM.tar.gz usr
 
     

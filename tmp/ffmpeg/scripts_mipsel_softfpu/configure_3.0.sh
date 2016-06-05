@@ -36,8 +36,8 @@
 --disable-vda \
 --disable-vdpau \
 --enable-nonfree \
---extra-cflags=" $FFMPEG_CFLAGS " \
---extra-ldflags=" $FFMPEG_LDFLAGS "
+--extra-ldflags=" -Wl,-O1  -Wl,--as-needed " \
+--extra-cflags=" $FFMPEG_CFLAGS "
 
 #--disable-optimizations \
 #--disable-mmx \
