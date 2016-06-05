@@ -69,6 +69,7 @@ static const char* FILENAME = "output.c";
 
 static Output_t * AvailableOutput[] = {
     &LinuxDvbOutput,
+    &SubtitleOutput,
     NULL
 };
 
@@ -101,7 +102,7 @@ static void printOutputCapabilities() {
 /* Output Functions              */
 /* ***************************** */
 
-static void OutputAdd(Context_t  *context, char * port)
+static void OutputAdd(Context_t  *context, char *port)
 {
     int i, j;
 
@@ -118,9 +119,14 @@ static void OutputAdd(Context_t  *context, char * port)
                     context->output->audio = AvailableOutput[i];
                     return;
                 }
-                if (!strcmp("video", port)) 
+                else if (!strcmp("video", port)) 
                 {
                     context->output->video = AvailableOutput[i];
+                    return;
+                }
+                else if (!strcmp("subtitle", port)) 
+                {
+                    context->output->subtitle = AvailableOutput[i];
                     return;
                 }
             }
@@ -139,6 +145,10 @@ static void OutputDel(Context_t  *context, char * port)
     else if (!strcmp("video", port))
     {
         context->output->video = NULL;
+    }
+    else if (!strcmp("subtitle", port))
+    {
+        context->output->subtitle = NULL;
     }
 }
 
@@ -163,6 +173,10 @@ static int Command(void  *_context, OutputCmd_t command, void * argument)
             {
                 ret |= context->output->audio->Command(context, OUTPUT_OPEN, "audio");
             }
+            if (context->playback->isSubtitle)
+            {
+                ret |= context->output->subtitle->Command(context, OUTPUT_OPEN, "subtitle");
+            }
         } 
         else
         {
@@ -181,6 +195,10 @@ static int Command(void  *_context, OutputCmd_t command, void * argument)
             if (context->playback->isAudio)
             {
                 ret |= context->output->audio->Command(context, OUTPUT_CLOSE, "audio");
+            }
+            if (context->playback->isSubtitle)
+            {
+                ret |= context->output->subtitle->Command(context, OUTPUT_CLOSE, "subtitle");
             }
         } 
         else
@@ -220,8 +238,18 @@ static int Command(void  *_context, OutputCmd_t command, void * argument)
                     ret = context->output->audio->Command(context, OUTPUT_PLAY, "audio");
                 }
             }
-        } else
+            if (!ret) 
+            {
+                if (context->playback->isSubtitle)
+                {
+                    ret = context->output->subtitle->Command(context, OUTPUT_PLAY, "subtitle");
+                }
+            }
+        } 
+        else
+        {
             ret = cERR_OUTPUT_INTERNAL_ERROR;
+        }
         break;
     }
     case OUTPUT_STOP: 
@@ -235,6 +263,10 @@ static int Command(void  *_context, OutputCmd_t command, void * argument)
             if (context->playback->isAudio)
             {
                 ret |= context->output->audio->Command(context, OUTPUT_STOP, "audio");
+            }
+            if (context->playback->isSubtitle)
+            {
+                ret |= context->output->subtitle->Command(context, OUTPUT_STOP, "subtitle");
             }
         } 
         else
@@ -255,6 +287,10 @@ static int Command(void  *_context, OutputCmd_t command, void * argument)
             {
                 ret |= context->output->audio->Command(context, OUTPUT_FLUSH, "audio");
             }
+            if (context->playback->isSubtitle)
+            {
+                ret |= context->output->subtitle->Command(context, OUTPUT_FLUSH, "subtitle");
+            }
         } 
         else
         {
@@ -273,6 +309,10 @@ static int Command(void  *_context, OutputCmd_t command, void * argument)
             if (context->playback->isAudio)
             {
                 ret |= context->output->audio->Command(context, OUTPUT_PAUSE, "audio");
+            }
+            if (context->playback->isSubtitle)
+            {
+                ret |= context->output->subtitle->Command(context, OUTPUT_PAUSE, "subtitle");
             }
         }
         else
@@ -331,6 +371,10 @@ static int Command(void  *_context, OutputCmd_t command, void * argument)
             {
                 ret |= context->output->audio->Command(context, OUTPUT_CONTINUE, "audio");
             }
+            if (context->playback->isSubtitle)
+            {
+                ret |= context->output->subtitle->Command(context, OUTPUT_CONTINUE, "subtitle");
+            }
         } 
         else
         {
@@ -364,6 +408,10 @@ static int Command(void  *_context, OutputCmd_t command, void * argument)
             if (context->playback->isAudio && (argument == NULL || *(char *) argument == 'a'))
             {
                 ret |= context->output->audio->Command(context, OUTPUT_CLEAR, "audio");
+            }
+            if (context->playback->isSubtitle && (argument == NULL || *(char *) argument == 's'))
+            {
+                ret |= context->output->subtitle->Command(context, OUTPUT_CLEAR, "subtitle");
             }
         } 
         else
@@ -402,6 +450,10 @@ static int Command(void  *_context, OutputCmd_t command, void * argument)
             if (context->playback->isVideo)
             {
                 return context->output->video->Command(context, OUTPUT_SWITCH, "video");
+            }
+            if (context->playback->isSubtitle)
+            {
+                return context->output->subtitle->Command(context, OUTPUT_SWITCH, "subtitle");
             }
         } 
         else
@@ -491,7 +543,8 @@ static int Command(void  *_context, OutputCmd_t command, void * argument)
 
 OutputHandler_t OutputHandler = {
     "Output",
-    NULL,
-    NULL,
+    NULL, //audio
+    NULL, //video
+    NULL, //subtitle
     &Command
 };

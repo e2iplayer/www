@@ -73,10 +73,12 @@ export CROSS_COMPILE=$TOOLCHAIN_NAME"-"
 SOURCE_FILES="main/exteplayer.c"
 SOURCE_FILES+=" container/container.c"
 SOURCE_FILES+=" container/container_ffmpeg.c"
-SOURCE_FILES+=" manager/audio.c"
 SOURCE_FILES+=" manager/manager.c"
+SOURCE_FILES+=" manager/audio.c"
 SOURCE_FILES+=" manager/video.c"
+SOURCE_FILES+=" manager/subtitle.c"
 SOURCE_FILES+=" output/linuxdvb_mipsel.c"
+SOURCE_FILES+=" output/output_subtitle.c"
 SOURCE_FILES+=" output/output.c"
 
 SOURCE_FILES+=" output/writer/mipsel/writer.c"
@@ -141,13 +143,15 @@ function buildFFmpeg
     fi
 }
 
-buildFFmpeg $FFMPEG_VERSION "true" "true" # "false" "true"
+buildFFmpeg $FFMPEG_VERSION "false" "false" # "false" "true"
 
 rm -rf $EXTEPLAYER3_OUT_FILE
 
 echo "FFMPEG_PATH = $FFMPEG_PATH"
 "$CROSS_COMPILE"gcc -fdata-sections -ffunction-sections -Wl,--gc-sections -Os $CFLAGS --sysroot=$SYSROOT $LDFLAGS $CPPFLAGS -I"$CURR_PATH"/include  -I$FFMPEG_PATH/usr/include/ -L$FFMPEG_PATH/usr/lib/ $SOURCE_FILES -o $EXTEPLAYER3_OUT_FILE -Wfatal-errors -lpthread -lavformat -lavcodec -lavutil -lswresample 
 "$CROSS_COMPILE"strip -s $EXTEPLAYER3_OUT_FILE
+
+exit 0
 
 FFMPEG_PACK_TMP=tmp/ffmpeg/tmp/ffmpeg"$FFMPEG_VERSION"_$EPLATFORM
 rm -rf $FFMPEG_PACK_TMP 

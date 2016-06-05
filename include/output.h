@@ -47,6 +47,19 @@ typedef struct
     char            *type;
 } AudioVideoOut_t;
 
+typedef struct
+{
+    uint32_t         trackId;
+    uint8_t         *data;
+    uint32_t         len;
+    
+    int64_t          pts;
+    int64_t          durationMS; // duration in miliseconds
+    
+    char            *type;
+} SubtitleOut_t;
+
+
 typedef struct Output_s 
 {
     char * Name;
@@ -57,12 +70,14 @@ typedef struct Output_s
 } Output_t;
 
 extern Output_t LinuxDvbOutput;
+extern Output_t SubtitleOutput;
 
 typedef struct OutputHandler_s 
 {
-    char * Name;
-    Output_t * audio;
-    Output_t * video;
+    char *Name;
+    Output_t *audio;
+    Output_t *video;
+    Output_t *subtitle;
     int32_t (* Command) (/*Context_t*/void  *, OutputCmd_t, void *);
 } OutputHandler_t;
 

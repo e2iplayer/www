@@ -497,7 +497,7 @@ static int32_t PlaybackSwitchAudio(Context_t  *context, int32_t *track)
 
     playback_printf(10, "\n");
 
-    if (context->playback->isPlaying)
+    if (context && context->playback && context->playback->isPlaying)
     {
         if (context->manager && context->manager->audio) 
         {
@@ -534,6 +534,52 @@ static int32_t PlaybackSwitchAudio(Context_t  *context, int32_t *track)
     }
 
     playback_printf(10, "exiting with value %d\n", ret);
+    return ret;
+}
+
+static int32_t PlaybackSwitchSubtitle(Context_t  *context, int32_t *track) 
+{
+    int32_t ret = cERR_PLAYBACK_NO_ERROR;
+    int32_t curtrackid = -1;
+    int32_t nextrackid = -1;
+
+    playback_printf(10, "Track: %d\n", *track);
+
+    if (context && context->playback && context->playback->isPlaying )
+    {
+        if (context->manager && context->manager->subtitle) 
+        {
+            context->manager->subtitle->Command(context, MANAGER_GET, &curtrackid);
+            context->manager->subtitle->Command(context, MANAGER_SET, track);
+            context->manager->subtitle->Command(context, MANAGER_GET, &nextrackid);
+          
+            if (curtrackid != nextrackid && nextrackid > -1)
+            {
+                if (context->output && context->output->subtitle)
+                {
+                    context->output->subtitle->Command(context, OUTPUT_SWITCH, (void*)"subtitle");
+                }
+
+                if (context->container && context->container->selectedContainer)
+                {
+                    context->container->selectedContainer->Command(context, CONTAINER_SWITCH_SUBTITLE, &nextrackid);
+                }
+            }
+        } 
+        else
+        {
+            ret = cERR_PLAYBACK_ERROR;
+            playback_err("no subtitle\n");
+        }
+    } 
+    else
+    {
+        playback_err("not possible\n");
+        ret = cERR_PLAYBACK_ERROR;
+    }
+
+    playback_printf(10, "exiting with value %d\n", ret);
+
     return ret;
 }
 
@@ -628,6 +674,11 @@ static int32_t Command(void* _context, PlaybackCmd_t command, void *argument)
             ret = PlaybackSwitchAudio(context, (int*)argument);
             break;
         }
+        case PLAYBACK_SWITCH_SUBTITLE: 
+        {
+            ret = PlaybackSwitchSubtitle(context, (int*)argument);
+            break;
+        }
         case PLAYBACK_INFO: 
         {
             ret = PlaybackInfo(context, (char**)argument);
@@ -653,24 +704,26 @@ static int32_t Command(void* _context, PlaybackCmd_t command, void *argument)
  * This is very unreadable and must be changed
  */
 PlaybackHandler_t PlaybackHandler = {
-    "Playback",
-    -1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    0,
-    &Command,
-    "",
-    0,
-    0
+    "Playback", //name
+    -1,         //fd
+    0,          //isFile
+    0,          //isHttp
+    0,          //isPlaying
+    0,          //isPaused
+    0,          //isForwarding
+    0,          //isSeeking
+    0,          //isCreationPhase
+    0,          //BackWard
+    0,          //SlowMotion
+    0,          //Speed
+    0,          //AVSync
+    0,          //isVideo
+    0,          //isAudio
+    0,          //isSubtitle
+    0,          //abortRequested
+    &Command,   //Command
+    "",         //uri
+    0,          //size
+    0,          //noprobe
+    0,          //isLoopMode
 };
