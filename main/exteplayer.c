@@ -210,11 +210,12 @@ static int HandleTracks(const Manager_t *ptrManager, const PlaybackCmd_t playbac
             /* switch command available only for audio and subtitle tracks */
             if ('a' == argvBuff[0] || 's' == argvBuff[0])
             {
+                int ok = 0;
                 int id = -1;
                 if ('i' == argvBuff[1])
                 {
                     int idx = -1;
-                    sscanf(argvBuff+2, "%d", &idx);
+                    ok = sscanf(argvBuff+2, "%d", &idx);
                     if (idx >= 0)
                     {
                         TrackDescription_t *TrackList = NULL;
@@ -234,13 +235,17 @@ static int HandleTracks(const Manager_t *ptrManager, const PlaybackCmd_t playbac
                             free(TrackList);
                         }
                     }
+                    else
+                    {
+                        id = idx;
+                    }
                 }
                 else
                 {
-                    sscanf(argvBuff+1, "%d", &id);
+                    ok = sscanf(argvBuff+1, "%d", &id);
                 }
                 
-                if(id >= 0)
+                if(id >= 0 || (1 == ok && id == -1))
                 {
                     commandRetVal = g_player->playback->Command(g_player, playbackSwitchCmd, (void*)&id);
                     fprintf(stderr, "{\"%c_%c\":{\"id\":%d,\"sts\":%d}}\n", argvBuff[0], 's', id, commandRetVal);
@@ -367,7 +372,7 @@ int main(int argc, char* argv[])
     memset(argvBuff, '\0', sizeof(argvBuff));
     int commandRetVal = -1;
     /* inform client that we can handle additional commands */
-    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 26);
+    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 27);
 
     if (0 != ParseParams(argc, argv, file, audioFile, &audioTrackIdx, &subtitleTrackIdx))
     {

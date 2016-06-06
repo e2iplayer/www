@@ -353,10 +353,9 @@ static char* Codec2Encoding(AVCodecContext *codec, int32_t *version)
     case AV_CODEC_ID_AMR_NB:
         return "A_IPCM";//return "A_AMR";
 
-/* In exteplayer3 embedded subtitle are not supported
- * the code to handle them was removed.
- * We must consider how to how to add support for
- * embedded subtitle again
+/* In exteplayer3 embedded text subtitle simple printed
+ * to output like other data.  Maybe worth to consider is to use 
+ * linux socket or pipe to put
  */
 
 /* subtitle */

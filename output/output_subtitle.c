@@ -115,16 +115,70 @@ static void releaseMutex(int line)
     subtitle_printf(100, "%d released mutex\n", line);
 }
 
-
 /* ***************************** */
 /* Functions                     */
 /* ***************************** */
+
+static char * json_string_escape(char *str)
+{
+    static char tmp[2048];
+    char *ptr1 = tmp;
+    char *ptr2 = str;
+    while (*ptr2 != '\0')
+    {
+        switch (*ptr2) 
+        {
+        case '"':
+            *ptr1++ = '\\';
+            *ptr1++ = '\"';
+        break;
+        case '\\':
+            *ptr1++ = '\\';
+            *ptr1++ = '\\';
+        break;
+        case '\b':
+            *ptr1++ = '\\';
+            *ptr1++ = 'b';
+        break;
+        case '\f':
+            *ptr1++ = '\\';
+            *ptr1++ = 'f';
+        break;
+        case '\n':
+            *ptr1++ = '\\';
+            *ptr1++ = 'n';
+        break;
+        case '\r': 
+            *ptr1++ = '\\';
+            *ptr1++ = 'r';
+        break;
+        case '\t': 
+            *ptr1++ = '\\';
+            *ptr1++ = 't';
+        break;
+        default:
+            *ptr1++ = *ptr2;
+            break;
+        }
+        
+        ++ptr2;
+    }
+    *ptr1 = '\0';
+    return tmp;
+}
+
+static int Flush()
+{   
+    fprintf(stderr, "{\"s_f\":{\"r\":0}}\n");
+    return cERR_SUBTITLE_NO_ERROR;
+}
 
 static int Write(void *_context, void *data)
 {
     Context_t  *context = (Context_t *)_context;
     char *Encoding      = NULL;
     SubtitleOut_t *out  = NULL;
+    int32_t curtrackid  = -1;
     
     subtitle_printf(10, "\n");
 
@@ -136,6 +190,11 @@ static int Write(void *_context, void *data)
 
     out = (SubtitleOut_t*) data;
     
+    context->manager->subtitle->Command(context, MANAGER_GET, &curtrackid);
+    if (curtrackid != out->trackId)
+    {
+        Flush();
+    }
     context->manager->subtitle->Command(context, MANAGER_GETENCODING, &Encoding);
 
     if (Encoding == NULL)
@@ -148,8 +207,7 @@ static int Write(void *_context, void *data)
 
     if(!strncmp("S_TEXT/SUBRIP", Encoding, 13))
     {
-        printf("[%u] [S_TEXT/SUBRIP] [%lld] -> [%lld]\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS);
-        printf("%s\n", (char *)out->data);
+        fprintf(stderr, "{\"s_a\":{\"id\":%d,\"s\":%lld,\"e\":%lld,\"t\":\"%s\"}}\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS, json_string_escape((char *)out->data));
     }
     else
     {
@@ -229,14 +287,17 @@ static int Command(void  *_context, OutputCmd_t command, void *argument)
     }
     case OUTPUT_SWITCH:
     {
-        subtitle_err("Subtitle Switch not implemented\n");
-        ret = cERR_SUBTITLE_ERROR;
+        ret = Flush();
         break;
     }
     case OUTPUT_FLUSH:
     {
-        subtitle_err("Subtitle Flush not implemented\n");
-        ret = cERR_SUBTITLE_ERROR;
+        ret = Flush();
+        break;
+    }
+    case OUTPUT_CLEAR:
+    {
+        ret = Flush();
         break;
     }
     case OUTPUT_PAUSE: 

@@ -32,7 +32,7 @@
 /* ***************************** */
 #define TRACKWRAP 20
 
-#define SAM_WITH_DEBUG
+//#define SAM_WITH_DEBUG
 #ifdef SAM_WITH_DEBUG
 #define SUBTITLE_MGR_DEBUG
 #else
@@ -294,7 +294,7 @@ static int32_t Command(void  *_context, ManagerCmd_t command, void *argument)
         if (requestedTrackId == -1)
         {
             // track id -1 mean disable subtitle 
-            CurrentTrack -1;
+            CurrentTrack = -1;
             break;
         }
 
