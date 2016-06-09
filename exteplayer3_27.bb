@@ -7,7 +7,7 @@ LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/GPL-2.0;md5=801f80980d171dd6425
 DEPENDS = "ffmpeg"
 RDEPENDS_${PN} = "ffmpeg"
 
-SRCREV = "ab72ea45723d30706ce29f9d70015b8a01b716f2"
+SRCREV = "4ee0d534fd23e97c08ac18fe1f51333e7af78b84"
 SRC_URI = "git://github.com/samsamsam-iptvplayer/exteplayer3.git;branch=master"
 
 S = "${WORKDIR}/git/"
@@ -15,10 +15,12 @@ S = "${WORKDIR}/git/"
 SOURCE_FILES = "main/exteplayer.c"
 SOURCE_FILES =+ "container/container.c"
 SOURCE_FILES =+ "container/container_ffmpeg.c"
-SOURCE_FILES =+ "manager/audio.c"
 SOURCE_FILES =+ "manager/manager.c"
+SOURCE_FILES =+ "manager/audio.c"
 SOURCE_FILES =+ "manager/video.c"
+SOURCE_FILES =+ "manager/subtitle.c"
 SOURCE_FILES =+ "output/linuxdvb_mipsel.c"
+SOURCE_FILES =+" output/output_subtitle.c"
 SOURCE_FILES =+ "output/output.c"
 
 SOURCE_FILES =+ "output/writer/mipsel/writer.c"
@@ -40,7 +42,6 @@ SOURCE_FILES =+ "output/writer/mipsel/mpeg2.c"
 SOURCE_FILES =+ "output/writer/mipsel/mpeg4.c"
 SOURCE_FILES =+ "output/writer/mipsel/divx3.c"
 SOURCE_FILES =+ "output/writer/mipsel/vc1.c"
-#SOURCE_FILES =+ "output/writer/mipsel/wmv.c"
 SOURCE_FILES =+ "playback/playback.c"
 
 do_compile() {
