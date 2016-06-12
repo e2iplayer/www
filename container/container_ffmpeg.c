@@ -360,6 +360,7 @@ static char* Codec2Encoding(AVCodecContext *codec, int32_t *version)
 
 /* subtitle */
     case AV_CODEC_ID_SSA:
+    case AV_CODEC_ID_ASS:
         return "S_TEXT/ASS"; /* Hellmaster1024: seems to be ASS instead of SSA */
     case AV_CODEC_ID_TEXT: /* Hellmaster1024: i dont have most of this, but lets hope it is normal text :-) */
     case AV_CODEC_ID_DVD_SUBTITLE:
@@ -1790,7 +1791,7 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                 break;
             case AVMEDIA_TYPE_SUBTITLE:
             {
-                if (stream->codec->codec_id != AV_CODEC_ID_SUBRIP) 
+                if (stream->codec->codec_id != AV_CODEC_ID_SUBRIP && stream->codec->codec_id != AV_CODEC_ID_ASS && stream->codec->codec_id != AV_CODEC_ID_SSA)
                 {
                     ffmpeg_printf(10, "subtitle with not supported codec codec_id[%u]\n", (uint32_t)stream->codec->codec_id);
                     printf("SULGE subtitle with not supported codec codec_id[%u]\n", (uint32_t)stream->codec->codec_id);
