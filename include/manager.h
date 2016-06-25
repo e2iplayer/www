@@ -14,7 +14,9 @@ typedef enum {
     MANAGER_DEL,
     MANAGER_GET_TRACK,
     MANAGER_GET_TRACK_DESC,
-    MANAGER_INIT_UPDATE
+    MANAGER_INIT_UPDATE,
+    MANAGER_UPDATED_TRACK_INFO,
+    MANAGER_REGISTER_UPDATED_TRACK_INFO,
 } ManagerCmd_t;
 
 typedef enum {
@@ -72,6 +74,7 @@ typedef struct TrackDescription_s
     unsigned int          frame_rate;
     int                   width;
     int                   height;
+    int                   progressive;
     
 } TrackDescription_t;
 

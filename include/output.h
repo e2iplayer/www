@@ -25,6 +25,7 @@ typedef enum {
     OUTPUT_REVERSE,
     OUTPUT_DISCONTINUITY_REVERSE,
     OUTPUT_GET_FRAME_COUNT,
+    OUTPUT_GET_PROGRESSIVE,
 } OutputCmd_t;
 
 typedef struct

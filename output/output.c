@@ -529,6 +529,21 @@ static int Command(void  *_context, OutputCmd_t command, void * argument)
             ret = cERR_OUTPUT_INTERNAL_ERROR;
         }
         break;
+    case OUTPUT_GET_PROGRESSIVE:
+    {
+        if (context && context->playback)
+        {
+            if (context->playback->isVideo)
+            {
+                return context->output->video->Command(context, OUTPUT_GET_PROGRESSIVE, (void*) argument);
+            }
+        }
+        else
+        {
+            ret = cERR_OUTPUT_INTERNAL_ERROR;
+        }
+        break;
+    }
     }
     default:
         output_err("%s::%s OutputCmd %d not supported!\n", FILENAME, __FUNCTION__, command);

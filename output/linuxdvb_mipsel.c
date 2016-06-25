@@ -35,6 +35,7 @@
 #include <asm/types.h>
 #include <pthread.h>
 #include <errno.h>
+#include <poll.h>
 
 #include "bcm_ioctls.h"
 
@@ -76,6 +77,15 @@ static const char AUDIODEV[] 	= "/dev/dvb/adapter0/audio0";
 
 static int videofd 	= -1;
 static int audiofd 	= -1;
+
+struct DVBApiVideoInfo_s
+{
+    int aspect_ratio;
+    int progressive;
+    int frame_rate;
+    int width, height;
+};
+static struct DVBApiVideoInfo_s videoInfo = {-1,-1,-1,-1,-1};
 
 unsigned long long int sCURRENT_PTS = 0;
 
@@ -944,6 +954,50 @@ static int Write(void  *_context, void* _out)
         } 
         else
         {
+            struct pollfd pfd[1];
+            pfd[0].fd = videofd;
+            pfd[0].events = POLLPRI;
+            int pollret = poll(pfd, 1, 0);
+            if (pollret > 0 && pfd[0].revents & POLLPRI)
+            {
+                struct video_event evt;
+                if (ioctl(videofd, VIDEO_GET_EVENT, &evt) == -1)
+                {
+                    linuxdvb_err("ioctl failed with errno %d\n", errno);
+                    linuxdvb_err("VIDEO_GET_EVENT: %s\n", strerror(errno));
+                }
+                else
+                {
+                    if (evt.type == VIDEO_EVENT_SIZE_CHANGED)
+                    {
+                        linuxdvb_printf(10, "VIDEO_EVENT_SIZE_CHANGED\n", evt.type);
+                        linuxdvb_printf(10, "width  : %d\n", evt.u.size.w);
+                        linuxdvb_printf(10, "height : %d\n", evt.u.size.h);
+                        linuxdvb_printf(10, "aspect : %d\n", evt.u.size.aspect_ratio);
+                        videoInfo.width = evt.u.size.w;
+                        videoInfo.height = evt.u.size.h;
+                        videoInfo.aspect_ratio = evt.u.size.aspect_ratio;
+                    }
+                    else if (evt.type == VIDEO_EVENT_FRAME_RATE_CHANGED)
+                    {
+                        linuxdvb_printf(10, "VIDEO_EVENT_FRAME_RATE_CHANGED\n", evt.type);
+                        linuxdvb_printf(10, "framerate : %d\n", evt.u.frame_rate);
+                        videoInfo.frame_rate = evt.u.frame_rate;
+                    }
+                    else if (evt.type == 16 /*VIDEO_EVENT_PROGRESSIVE_CHANGED*/)
+                    {
+                        linuxdvb_printf(10, "VIDEO_EVENT_PROGRESSIVE_CHANGED\n", evt.type);
+                        linuxdvb_printf(10, "progressive : %d\n", evt.u.frame_rate);
+                        videoInfo.progressive = evt.u.frame_rate;
+                        context->manager->video->Command(context, MANAGER_UPDATED_TRACK_INFO, NULL);
+                    }
+                    else
+                    {
+                        linuxdvb_err("unhandled DVBAPI Video Event %d\n", evt.type);
+                    }
+                }
+            }
+
             call.fd           = videofd;
             call.data         = out->data;
             call.len          = out->len;
@@ -1149,6 +1203,11 @@ static int Command(void  *_context, OutputCmd_t command, void * argument) {
         unsigned long long int frameCount = 0;
         ret = LinuxDvbGetFrameCount(context, &frameCount);
         *((unsigned long long int*)argument) = (unsigned long long int)frameCount;
+        break;
+    }
+    case OUTPUT_GET_PROGRESSIVE: {
+        ret = cERR_LINUXDVB_NO_ERROR;
+        *((int*)argument) = videoInfo.progressive;
         break;
     }
     default:

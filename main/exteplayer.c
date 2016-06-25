@@ -185,7 +185,7 @@ static int HandleTracks(const Manager_t *ptrManager, const PlaybackCmd_t playbac
                 }
                 else // video
                 {
-                    fprintf(stderr, "{\"%c_%c\":{\"id\":%d,\"e\":\"%s\",\"n\":\"%s\",\"w\":%d,\"h\":%d,\"f\":%u}}\n", argvBuff[0], argvBuff[1], track->Id , track->Encoding, track->Name, track->width, track->height, track->frame_rate);
+                    fprintf(stderr, "{\"%c_%c\":{\"id\":%d,\"e\":\"%s\",\"n\":\"%s\",\"w\":%d,\"h\":%d,\"f\":%u,\"p\":%d}}\n", argvBuff[0], argvBuff[1], track->Id , track->Encoding, track->Name, track->width, track->height, track->frame_rate, track->progressive);
                 }
                 free(track->Encoding);
                 free(track->Name);
@@ -200,7 +200,7 @@ static int HandleTracks(const Manager_t *ptrManager, const PlaybackCmd_t playbac
                 }
                 else // video
                 {
-                    fprintf(stderr, "{\"%c_%c\":{\"id\":%d,\"e\":\"%s\",\"n\":\"%s\",\"w\":%d,\"h\":%d,\"f\":%u}}\n", argvBuff[0], argvBuff[1], -1, "", "", -1, -1, 0);
+                    fprintf(stderr, "{\"%c_%c\":{\"id\":%d,\"e\":\"%s\",\"n\":\"%s\",\"w\":%d,\"h\":%d,\"f\":%u,\"p\":%d}}\n", argvBuff[0], argvBuff[1], -1, "", "", -1, -1, 0, -1);
                 }
             }
             break;
@@ -256,6 +256,11 @@ static int HandleTracks(const Manager_t *ptrManager, const PlaybackCmd_t playbac
     }
     
     return commandRetVal;
+}
+
+static void UpdateVideoTrack()
+{
+    HandleTracks(g_player->manager->video, (PlaybackCmd_t)-1, "vc");
 }
 
 static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *pAudioTrackIdx, int *subtitleTrackIdx)
@@ -415,6 +420,8 @@ int main(int argc, char* argv[])
     g_player->output->Command(g_player, OUTPUT_ADD, "audio");
     g_player->output->Command(g_player, OUTPUT_ADD, "video");
     g_player->output->Command(g_player, OUTPUT_ADD, "subtitle");
+
+    g_player->manager->video->Command(g_player, MANAGER_REGISTER_UPDATED_TRACK_INFO, UpdateVideoTrack);
     g_player->playback->noprobe = 1;
     
     PlayFiles_t playbackFiles = {file, NULL};

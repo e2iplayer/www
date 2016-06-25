@@ -72,6 +72,7 @@ static Track_t * Tracks = NULL;
 static int TrackCount = 0;
 static int CurrentTrack = 0; //TRACK[0] as default.
 
+static void (* updatedTrackInfoFnc)(void) = NULL;
 /* ***************************** */
 /* Prototypes                    */
 /* ***************************** */
@@ -242,6 +243,7 @@ static int Command(void  *_context, ManagerCmd_t command, void * argument) {
                 track->frame_rate = Tracks[CurrentTrack].frame_rate;
                 track->width      = Tracks[CurrentTrack].width;
                 track->height     = Tracks[CurrentTrack].height;
+                context->output->video->Command(context, OUTPUT_GET_PROGRESSIVE, &(track->progressive));
             }
         }
         else
@@ -319,6 +321,17 @@ static int Command(void  *_context, ManagerCmd_t command, void * argument) {
         {
             Tracks[i].pending = 1;
         }
+        break;
+    }
+    case MANAGER_UPDATED_TRACK_INFO:
+    {
+        if (updatedTrackInfoFnc != NULL)
+            updatedTrackInfoFnc();
+        break;
+    }
+    case MANAGER_REGISTER_UPDATED_TRACK_INFO:
+    {
+        updatedTrackInfoFnc = (void (* )(void))argument;
         break;
     }
     default:
