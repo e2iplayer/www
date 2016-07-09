@@ -336,6 +336,7 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
         case 'i':
             printf("Play in (infinity) loop.\n");
             PlaybackHandler.isLoopMode = 1;
+            break;
         default:
             printf ("?? getopt returned character code 0%o ??\n", c);
             ret = -1;
@@ -377,7 +378,7 @@ int main(int argc, char* argv[])
     memset(argvBuff, '\0', sizeof(argvBuff));
     int commandRetVal = -1;
     /* inform client that we can handle additional commands */
-    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 27);
+    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 28);
 
     if (0 != ParseParams(argc, argv, file, audioFile, &audioTrackIdx, &subtitleTrackIdx))
     {

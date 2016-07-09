@@ -22,18 +22,21 @@
 /* ***************************** */
 /* Includes                      */
 /* ***************************** */
+
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 
-#include "misc.h"
 #include "writer.h"
 
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
 
+#ifdef SAM_WITH_DEBUG
 #define WRITER_DEBUG
+#else
+#define WRITER_SILENT
+#endif
 
 #ifdef WRITER_DEBUG
 
@@ -60,30 +63,30 @@ if (debug_level >= level) printf(x); } while (0)
 /* ***************************** */
 
 static Writer_t * AvailableWriter[] = {
-    &WriterAudioAAC,
-    &WriterAudioAACHE,
-    &WriterAudioAACPLUS,
-    &WriterAudioAC3,
-    &WriterAudioEAC3,
+    &WriterAudioIPCM,
+    &WriterAudioPCM,
     &WriterAudioMP3,
     &WriterAudioMPEGL3,
-    &WriterAudioPCM,
-    &WriterAudioIPCM,
-    &WriterAudioLPCM,
+    &WriterAudioAC3,
+    &WriterAudioAAC,
     &WriterAudioDTS,
     &WriterAudioWMA,
-    &WriterAudioWMAPRO,
-    
-    &WriterVideoH264,
-    &WriterVideoH263,
-    &WriterVideoMPEG4,
+    &WriterAudioVORBIS,
+
     &WriterVideoMPEG2,
-    &WriterVideoMPEG1,
+    &WriterVideoMPEGH264,
+    &WriterVideoH264,
+    &WriterVideoDIVX,
+    &WriterVideoFOURCC,
+    &WriterVideoMSCOMP,
+    &WriterVideoWMV,
+    &WriterVideoH263,
+    &WriterVideoFLV,
     &WriterVideoVC1,
-    &WriterVideoDIVX3,
-    //&WriterVideoWMV,
     NULL
 };
+
+//    &WriterAudioFLAC,
 
 /* ***************************** */
 /* Prototypes                    */
@@ -92,66 +95,6 @@ static Writer_t * AvailableWriter[] = {
 /* ***************************** */
 /*  Functions                    */
 /* ***************************** */
-ssize_t write_with_retry(int fd, const void *buf, size_t size)
-{
-    ssize_t ret;
-    int retval = 0;
-    while(size > 0 && 0 == PlaybackDieNow(0))
-    {
-        ret = write(fd, buf, size);
-        //printf("[%d] write [%lld]\n", fd, ret);
-        if (ret < 0)
-        {
-            switch(errno)
-            {
-                case EINTR:
-                case EAGAIN:
-                    usleep(1000);
-                    continue;
-                default:
-                    retval = -3;
-                    break;
-            }
-            if (retval < 0)
-            {
-                break;
-            }
-        }
-            
-        if (ret < 0)
-        {
-            return ret;
-        }
-        
-        size -= ret;
-        buf += ret;
-        
-        if(size > 0)
-        {
-            if( usleep(1000) )
-            {
-                writer_err("usleep error \n");
-            }
-        }
-    }
-    return 0;
-}
-
-ssize_t writev_with_retry(int fd, const struct iovec *iov, size_t ic) 
-{
-    ssize_t len = 0;
-    int i = 0;
-    for(i=0; i<ic; ++i)
-    {
-        write_with_retry(fd, iov[i].iov_base, iov[i].iov_len); 
-        len += iov[i].iov_len;
-        if(PlaybackDieNow(0))
-        {
-            return -1;
-        }
-    }
-    return len;
-}
 
 Writer_t* getWriter(char* encoding)
 {

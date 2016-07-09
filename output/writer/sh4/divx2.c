@@ -34,13 +34,11 @@
 #include <sys/uio.h>
 #include <linux/dvb/video.h>
 #include <linux/dvb/audio.h>
+#include <linux/dvb/stm_ioctls.h>
 #include <memory.h>
 #include <asm/types.h>
 #include <pthread.h>
 #include <errno.h>
-
-#include "stm_ioctls.h"
-#include "bcm_ioctls.h"
 
 #include "common.h"
 #include "output.h"
@@ -142,8 +140,12 @@ static int writeData(void* _call)
     WriterAVCallData_t* call = (WriterAVCallData_t*) _call;
 
     unsigned char  PesHeader[PES_MAX_HEADER_SIZE];
-    unsigned char  Version = 5;
+    unsigned char  FakeHeaders[64]; // 64bytes should be enough to make the fake headers
+    unsigned int   FakeHeaderLength;
+    unsigned char  Version             = 5;
     unsigned int   FakeStartCode       = (Version << 8) | PES_VERSION_FAKE_START_CODE;
+    unsigned int   usecPerFrame = 41708; /* Hellmaster1024: default value */
+    BitPacker_t ld = {FakeHeaders, 0, 32};
 
     divx_printf(10, "\n");
 
@@ -167,17 +169,6 @@ static int writeData(void* _call)
 
     divx_printf(10, "AudioPts %lld\n", call->Pts);
 
-
-    struct iovec iov[4];
-    int ic = 0;
-    iov[ic].iov_base = PesHeader;
-#ifdef __sh__
-    iov[ic++].iov_len = InsertPesHeader (PesHeader, call->len, MPEG_VIDEO_PES_START_CODE, call->Pts, FakeStartCode);
-    unsigned int   usecPerFrame = 41708; /* Hellmaster1024: default value */
-    unsigned char  FakeHeaders[64]; // 64bytes should be enough to make the fake headers
-    unsigned int   FakeHeaderLength;
-    BitPacker_t ld = {FakeHeaders, 0, 32};
-    
     usecPerFrame = 1000000000 / call->FrameRate;
     divx_printf(10, "Microsecends per frame = %d\n", usecPerFrame);
 
@@ -197,24 +188,26 @@ static int writeData(void* _call)
     // microseconds per frame
     FlushBits(&ld);
 
-    FakeHeaderLength = (ld.Ptr - (FakeHeaders));
-    
+    FakeHeaderLength    = (ld.Ptr - (FakeHeaders));
+
+    struct iovec iov[4];
+    int ic = 0;
+    iov[ic].iov_base = PesHeader;
+    iov[ic++].iov_len = InsertPesHeader (PesHeader, call->len, MPEG_VIDEO_PES_START_CODE, call->Pts, FakeStartCode);
     iov[ic].iov_base = FakeHeaders;
     iov[ic++].iov_len = FakeHeaderLength;
-#else
-    iov[ic++].iov_len = InsertPesHeader (PesHeader, call->len, MPEG_VIDEO_PES_START_CODE, call->Pts, 0);
-#endif
-
-    if (updateCodecData(call->private_data, call->private_size)) 
+    
+    if (initialHeader) 
     {
         iov[ic].iov_base = call->private_data;
         iov[ic++].iov_len = call->private_size;
+        initialHeader = 0;
     }
     
     iov[ic].iov_base = call->data;
     iov[ic++].iov_len = call->len;
 
-    int len = writev_with_retry(call->fd, iov, ic);
+    int len = writev(call->fd, iov, ic);
 
     divx_printf(10, "xvid_Write < len=%d\n", len);
 
@@ -226,14 +219,21 @@ static int writeData(void* _call)
 /* ***************************** */
 
 static WriterCaps_t mpeg4p2_caps = {
-    "mscomp",
+    "mpeg4p2",
     eVideo,
-    "V_MSCOMP",
+    "V_MPEG4",
     VIDEO_ENCODING_MPEG4P2,
-    //STREAMTYPE_DIVX311,
-    STREAMTYPE_MPEG4_Part2, 
-    CT_MPEG4_PART2
+    -1,
+    -1
 };
+
+struct Writer_s WriterVideoMPEG4 = {
+    &reset,
+    &writeData,
+    NULL,
+    &mpeg4p2_caps
+};
+
 
 struct Writer_s WriterVideoMSCOMP = {
     &reset,
@@ -247,8 +247,8 @@ static WriterCaps_t fourcc_caps = {
     eVideo,
     "V_MS/VFW/FOURCC",
     VIDEO_ENCODING_MPEG4P2,
-    STREAMTYPE_MPEG4_Part2,
-    CT_MPEG4_PART2
+    -1,
+    -1
 };
 
 struct Writer_s WriterVideoFOURCC = {
@@ -263,8 +263,8 @@ static WriterCaps_t divx_caps = {
     eVideo,
     "V_MKV/XVID",
     VIDEO_ENCODING_MPEG4P2,
-    STREAMTYPE_MPEG4_Part2,
-    CT_MPEG4_PART2
+    -1,
+    -1
 };
 
 struct Writer_s WriterVideoDIVX = {

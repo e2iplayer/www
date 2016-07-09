@@ -24,10 +24,6 @@
 
 typedef struct pcmPrivateData_s
 {
-    int32_t uNoOfChannels;
-    int32_t uSampleRate;
-    int32_t uBitsPerSample;
-    int32_t bLittleEndian;
     uint8_t bResampling;
     
     /* Field taken direct from stream->codec */

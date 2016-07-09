@@ -362,7 +362,6 @@ static char* Codec2Encoding(AVCodecContext *codec, int32_t *version)
     case AV_CODEC_ID_SSA:
     case AV_CODEC_ID_ASS:
         return "S_TEXT/ASS"; /* Hellmaster1024: seems to be ASS instead of SSA */
-    case AV_CODEC_ID_TEXT: /* Hellmaster1024: i dont have most of this, but lets hope it is normal text :-) */
     case AV_CODEC_ID_DVD_SUBTITLE:
     case AV_CODEC_ID_DVB_SUBTITLE:
     case AV_CODEC_ID_XSUB:
@@ -371,8 +370,10 @@ static char* Codec2Encoding(AVCodecContext *codec, int32_t *version)
     case AV_CODEC_ID_DVB_TELETEXT:
 //    case CODEC_ID_DVB_TELETEXT:
 //        return "S_TEXT/SRT"; /* fixme */
+    case AV_CODEC_ID_TEXT: ///< raw UTF-8 text
+        return "S_TEXT/UTF-8";
     case AV_CODEC_ID_SRT:
-        return "S_TEXT/SRT"; /* fixme */
+        return "S_TEXT/SRT";
     case AV_CODEC_ID_SUBRIP:
         return "S_TEXT/SUBRIP"; 
     default:
@@ -382,11 +383,12 @@ static char* Codec2Encoding(AVCodecContext *codec, int32_t *version)
         {
             return "A_IPCM";
         }
-        
+        /*
         if (codec->codec_type == AVMEDIA_TYPE_SUBTITLE)
         {
             return "S_TEXT/SRT";
         }
+        */
         ffmpeg_err("Codec ID %d (%.8lx) not found\n", (int32_t)codec->codec_id, (int32_t)codec->codec_id);
     }
     return NULL;
@@ -488,7 +490,7 @@ static void FFMPEGThread(Context_t *context)
     Mpeg4P2Context mpeg4p2_context;
     memset(&mpeg4p2_context, 0, sizeof(Mpeg4P2Context));
     AVBitStreamFilterContext *mpeg4p2_bsf_context = av_bitstream_filter_init("mpeg4_unpack_bframes");
-
+    
     ffmpeg_printf(10, "\n");
     while ( context->playback->isCreationPhase )
     {
@@ -582,9 +584,13 @@ static void FFMPEGThread(Context_t *context)
                     break;
                 }
             }
+            
             mpeg4p2_context_reset(&mpeg4p2_context);
-            av_bitstream_filter_close(mpeg4p2_bsf_context);
-            mpeg4p2_bsf_context = av_bitstream_filter_init("mpeg4_unpack_bframes");
+            if (NULL != mpeg4p2_bsf_context)
+            {
+                av_bitstream_filter_close(mpeg4p2_bsf_context);
+                mpeg4p2_bsf_context = av_bitstream_filter_init("mpeg4_unpack_bframes");
+            }
         }
 
         int ffmpegStatus = 0;
@@ -632,7 +638,7 @@ static void FFMPEGThread(Context_t *context)
             if (videoTrack && (videoTrack->AVIdx == cAVIdx) && (videoTrack->Id == pid))
             {
                 AVCodecContext *codec_context = ((AVStream*)(videoTrack->stream))->codec;
-                if (codec_context->codec_id == AV_CODEC_ID_MPEG4)
+                if (codec_context->codec_id == AV_CODEC_ID_MPEG4 && NULL != mpeg4p2_bsf_context)
                 {
                     // should never happen, if it does print error and exit immediately, so we can easily spot it
                     if (filter_packet(mpeg4p2_bsf_context, codec_context, &packet) < 0)
@@ -830,10 +836,6 @@ static void FFMPEGThread(Context_t *context)
                             {
                                 downmix = 1;
                             }
-                            /* At now whole code from this file was not checked on SH4 STB 
-                             * and probably need to be fixed for these STB
-                             */
-                            #error
 #endif
                             if(downmix)
                             {
@@ -1078,7 +1080,10 @@ static void FFMPEGThread(Context_t *context)
     }
     
     mpeg4p2_context_reset(&mpeg4p2_context);
-    av_bitstream_filter_close(mpeg4p2_bsf_context);
+    if (NULL != mpeg4p2_bsf_context)
+    {
+        av_bitstream_filter_close(mpeg4p2_bsf_context);
+    }
 
     hasPlayThreadStarted = 0;
     context->playback->isPlaying = 0;
@@ -1528,7 +1533,7 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                         ffmpeg_printf(10, "Stream has no duration so we take the duration from context\n");
                         track.duration = (int64_t) avContext->duration / 1000;
                     }
-    #if 1
+                    
                     if(!strncmp(encoding, "A_IPCM", 6) || !strncmp(encoding, "A_LPCM", 6))
                     {
                         track.inject_as_pcm = 1;
@@ -1551,8 +1556,6 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                     {
                         track.inject_raw_pcm = 1;
                     }
-    #endif
-    #if 1
                     else if(stream->codec->codec_id == AV_CODEC_ID_AAC)
                     {
                         if( 0 == strncmp(avContext->iformat->name, "mpegts", 6) || 
@@ -1667,7 +1670,7 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                                 codec_id = WMA_VERSION_1;
                                 break;
                         }
-    #ifdef __sh__
+#ifdef __sh__
                         track.aacbuflen = 104 + stream->codec->extradata_size;
                         track.aacbuf = malloc(track.aacbuflen);
                         memset (track.aacbuf, 0, track.aacbuflen);
@@ -1731,7 +1734,7 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                         memcpy(track.aacbuf + 94, &stream->codec->extradata_size, 2); //bits_per_sample
 
                         memcpy(track.aacbuf + 96, stream->codec->extradata, stream->codec->extradata_size);
-    #else
+#else
                         track.aacbuflen = 18 + stream->codec->extradata_size;
                         track.aacbuf = malloc(track.aacbuflen);
                         memset (track.aacbuf, 0, track.aacbuflen);
@@ -1764,7 +1767,7 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                         *(data++) = codec_data_size & 0xff;
                         *(data++) = (codec_data_size >> 8) & 0xff;
                         memcpy(data, codec_data_pointer, codec_data_size);
-    #endif
+#endif
                         ffmpeg_printf(1, "aacbuf:\n");
                         Hexdump(track.aacbuf, track.aacbuflen);
 
@@ -1773,7 +1776,7 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
 
                         track.have_aacheader = 1;
                     }
-    #endif
+                    
                     if (context->manager->audio)
                     {
                         ffmpeg_printf(1, "cAVIdx[%d]: MANAGER_ADD track AUDIO\n");
@@ -1791,7 +1794,11 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                 break;
             case AVMEDIA_TYPE_SUBTITLE:
             {
-                if (stream->codec->codec_id != AV_CODEC_ID_SUBRIP && stream->codec->codec_id != AV_CODEC_ID_ASS && stream->codec->codec_id != AV_CODEC_ID_SSA)
+                if (stream->codec->codec_id != AV_CODEC_ID_ASS &&
+                    stream->codec->codec_id != AV_CODEC_ID_SSA &&
+                    stream->codec->codec_id != AV_CODEC_ID_SUBRIP && 
+                    stream->codec->codec_id != AV_CODEC_ID_TEXT &&
+                    stream->codec->codec_id != AV_CODEC_ID_SRT)
                 {
                     ffmpeg_printf(10, "subtitle with not supported codec codec_id[%u]\n", (uint32_t)stream->codec->codec_id);
                     printf("SULGE subtitle with not supported codec codec_id[%u]\n", (uint32_t)stream->codec->codec_id);
