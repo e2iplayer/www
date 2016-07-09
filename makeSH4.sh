@@ -6,7 +6,7 @@ function usage {
    echo "Usage:"
    echo "$0 platform ffmpeg_ver"
    echo "platform:       sh4 | sh4_new"
-   echo "ffmpeg_ver:     2.8 | 2.8.5 | 3.0"
+   echo "ffmpeg_ver:     1.0.10 | 1.1.16 | 1.2.12 | 2.0.7 | 2.2.16 | 2.5.11 | 2.6.9 | 2.7.7 | 2.8.7 | 3.0.2 | 3.1.1 "
    exit 1
 }
 
@@ -16,7 +16,6 @@ then
 fi
 
 EPLATFORM=$1
-FFMPEG_VERSION=$2
 
 if [ "$EPLATFORM" != "sh4" -a "$EPLATFORM" != "sh4_new" ];
 then
@@ -24,9 +23,20 @@ then
     usage
 fi
 
-if [ "$FFMPEG_VERSION" != "2.8.5" -a "$FFMPEG_VERSION" != "3.0" ];
+FFMPEG_VERSION=""
+ffmpegVersionArray=( "1.0.10" "1.1.16" "1.2.12" "2.0.7" "2.2.16" "2.5.11" "2.6.9" "2.7.7" "2.8.7" "3.0.2" "3.1.1" )
+for i in "${ffmpegVersionArray[@]}"
+do
+    if [ "$i" == "$2" ];
+    then
+        FFMPEG_VERSION=$2
+        break
+    fi
+done
+
+if [ "$FFMPEG_VERSION" == "" ];
 then
-    echo "Please give supported ffmpeg (2.8 | 2.8.5|3.0) version!"
+    echo "Please give supported ffmpeg (1.0.10 | 1.1.16 | 1.2.12 | 2.0.7  | 2.2.16 | 2.5.11 | 2.6.9 | 2.7.7 | 2.8.7 | 3.0.2 | 3.1.1) version!"
     usage
 fi
 
@@ -129,7 +139,7 @@ function buildFFmpeg
     fi
 }
 
-buildFFmpeg $FFMPEG_VERSION "flase" "true" # "false" "true"
+buildFFmpeg $FFMPEG_VERSION "true" "true" # "false" "true"
 
 rm -rf $EXTEPLAYER3_OUT_FILE
 

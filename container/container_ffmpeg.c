@@ -158,7 +158,10 @@ void progressive_download_set(int32_t val)
  * and must be corrected in the future
  */
 #include "buff_ffmpeg.c"
+
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(56, 34, 100)
 #include "mpeg4p2_ffmpeg.c"
+#endif
 
 /* This is also bad solution 
  * such configuration should passed maybe 
@@ -360,7 +363,9 @@ static char* Codec2Encoding(AVCodecContext *codec, int32_t *version)
 
 /* subtitle */
     case AV_CODEC_ID_SSA:
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 3, 100)
     case AV_CODEC_ID_ASS:
+#endif
         return "S_TEXT/ASS"; /* Hellmaster1024: seems to be ASS instead of SSA */
     case AV_CODEC_ID_DVD_SUBTITLE:
     case AV_CODEC_ID_DVB_SUBTITLE:
@@ -487,9 +492,11 @@ static void FFMPEGThread(Context_t *context)
     uint64_t out_channel_layout = AV_CH_LAYOUT_STEREO;
     uint32_t cAVIdx = 0;
 
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(56, 34, 100)
     Mpeg4P2Context mpeg4p2_context;
     memset(&mpeg4p2_context, 0, sizeof(Mpeg4P2Context));
     AVBitStreamFilterContext *mpeg4p2_bsf_context = av_bitstream_filter_init("mpeg4_unpack_bframes");
+#endif
     
     ffmpeg_printf(10, "\n");
     while ( context->playback->isCreationPhase )
@@ -584,13 +591,14 @@ static void FFMPEGThread(Context_t *context)
                     break;
                 }
             }
-            
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(56, 34, 100)
             mpeg4p2_context_reset(&mpeg4p2_context);
             if (NULL != mpeg4p2_bsf_context)
             {
                 av_bitstream_filter_close(mpeg4p2_bsf_context);
                 mpeg4p2_bsf_context = av_bitstream_filter_init("mpeg4_unpack_bframes");
             }
+#endif
         }
 
         int ffmpegStatus = 0;
@@ -637,6 +645,7 @@ static void FFMPEGThread(Context_t *context)
 
             if (videoTrack && (videoTrack->AVIdx == cAVIdx) && (videoTrack->Id == pid))
             {
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(56, 34, 100)
                 AVCodecContext *codec_context = ((AVStream*)(videoTrack->stream))->codec;
                 if (codec_context->codec_id == AV_CODEC_ID_MPEG4 && NULL != mpeg4p2_bsf_context)
                 {
@@ -654,6 +663,7 @@ static void FFMPEGThread(Context_t *context)
                     update_max_injected_pts(latestPts);
                 }
                 else
+#endif
                 {
                     currentVideoPts = videoTrack->pts = pts = calcPts(cAVIdx, videoTrack->stream, packet.pts);
                     videoTrack->dts = dts = calcPts(cAVIdx, videoTrack->stream, packet.dts);
@@ -1079,11 +1089,13 @@ static void FFMPEGThread(Context_t *context)
 #endif
     }
     
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(56, 34, 100)
     mpeg4p2_context_reset(&mpeg4p2_context);
     if (NULL != mpeg4p2_bsf_context)
     {
         av_bitstream_filter_close(mpeg4p2_bsf_context);
     }
+#endif
 
     hasPlayThreadStarted = 0;
     context->playback->isPlaying = 0;
@@ -1794,8 +1806,10 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                 break;
             case AVMEDIA_TYPE_SUBTITLE:
             {
-                if (stream->codec->codec_id != AV_CODEC_ID_ASS &&
-                    stream->codec->codec_id != AV_CODEC_ID_SSA &&
+                if (stream->codec->codec_id != AV_CODEC_ID_SSA &&
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(55, 3, 100)
+                    stream->codec->codec_id != AV_CODEC_ID_ASS &&
+#endif
                     stream->codec->codec_id != AV_CODEC_ID_SUBRIP && 
                     stream->codec->codec_id != AV_CODEC_ID_TEXT &&
                     stream->codec->codec_id != AV_CODEC_ID_SRT)
