@@ -143,7 +143,7 @@ function buildFFmpeg
     fi
 }
 
-buildFFmpeg $FFMPEG_VERSION "true" "true" # "false" "true"
+buildFFmpeg $FFMPEG_VERSION "false" "false" # "false" "true"
 
 rm -rf $EXTEPLAYER3_OUT_FILE
 
