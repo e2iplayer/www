@@ -9,6 +9,8 @@
 #ifndef H_DVB_BCM_H
 #define H_DVB_BCM_H
 
+#include <stdint.h>
+
 typedef struct video_codec_data
 {
     int32_t length;
