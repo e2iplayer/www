@@ -423,8 +423,11 @@ int main(int argc, char* argv[])
     g_player->output->Command(g_player, OUTPUT_ADD, "subtitle");
 
     g_player->manager->video->Command(g_player, MANAGER_REGISTER_UPDATED_TRACK_INFO, UpdateVideoTrack);
-    g_player->playback->noprobe = 1;
-    
+    if (strncmp(file, "rtmp", 4))
+    {
+        g_player->playback->noprobe = 1;
+    }
+
     PlayFiles_t playbackFiles = {file, NULL};
     if('\0' != audioFile[0])
     {
