@@ -697,7 +697,7 @@ static void FFMPEGThread(Context_t *context)
             {
                 currentAudioPts = audioTrack->pts = pts = calcPts(cAVIdx, audioTrack->stream, packet.pts);
 
-                if ((currentAudioPts > latestPts) && (!videoTrack))
+                if ((currentAudioPts != INVALID_PTS_VALUE) && (currentAudioPts > latestPts) && (!videoTrack))
                 {
                     latestPts = currentAudioPts;
                     update_max_injected_pts(latestPts);
