@@ -48,8 +48,12 @@ case "$EPLATFORM" in
         export SYSROOT=""
         CFLAGS=" -I$BASE_PATH/cdkroot/ -L$BASE_PATH/cdkroot/ "
         LDFLAGS=" -L$BASE_PATH/cdkroot/ -L$BASE_PATH/cdkroot/ "
-        FFMPEG_CFLAGS=" -I$BASE_PATH/cdkroot/ "
-        FFMPEG_LDFLAGS=" -I$BASE_PATH/cdkroot/ "
+       
+        OPENSSL_VER="openssl-1.0.2g"
+        OPENSSL_PATH="/mnt/new2/new_openssl_sh4/$OPENSSL_VER"
+        
+        FFMPEG_CFLAGS=" -I$BASE_PATH/cdkroot/ -I$OPENSSL_PATH/include "
+        FFMPEG_LDFLAGS=" -I$BASE_PATH/cdkroot/ -L$OPENSSL_PATH "
         ;;
     sh4_new)
         BASE_PATH="/mnt/new2/openatv/build-enviroment/builds/openatv/spark/tmp/sysroots/"
@@ -107,12 +111,13 @@ function buildFFmpeg
 {
     FFMPEG_VERSION=$1
     FFMPEG_BASE_PATH=$CURR_PATH"/tmp/ffmpeg/"
-    FFMPEG_PATH=$FFMPEG_BASE_PATH"tmp/ffmpeg-"$FFMPEG_VERSION
+    mkdir -p $FFMPEG_BASE_PATH"tmp/$EPLATFORM/"
+    FFMPEG_PATH=$FFMPEG_BASE_PATH"tmp/$EPLATFORM/ffmpeg-"$FFMPEG_VERSION
     
     SOURCE_URL="http://ffmpeg.org/releases/ffmpeg-"$FFMPEG_VERSION".tar.gz"
-    OUT_FILE=$FFMPEG_PATH".tar.gz"
+    OUT_FILE=$FFMPEG_BASE_PATH"tmp/ffmpeg-"$FFMPEG_VERSION".tar.gz"
     
-    if [ "true" == "$2" ];
+    if [ "true" == "$2" ] || [ ! -d $FFMPEG_PATH ];
     then
         if [ -d $FFMPEG_PATH ] && [ "true" == "$3"  ];
         then
@@ -124,9 +129,9 @@ function buildFFmpeg
             wget $SOURCE_URL -O $OUT_FILE
         fi
         
-        if [ "true" == "$3" ];
+        if [ ! -d $FFMPEG_PATH ];
         then
-            tar -zxf $OUT_FILE -C $FFMPEG_BASE_PATH"tmp/"
+            tar -zxf $OUT_FILE -C $FFMPEG_BASE_PATH"tmp/$EPLATFORM/"
         fi
         
         CONFIGURE_PATH=$FFMPEG_BASE_PATH"/scripts_$EPLATFORM/configure_"$FFMPEG_VERSION".sh"
@@ -139,7 +144,8 @@ function buildFFmpeg
     fi
 }
 
-buildFFmpeg $FFMPEG_VERSION "true" "true" # "false" "true"
+# rebuild ffmpeg libs, force rebuild
+buildFFmpeg $FFMPEG_VERSION "false" "false"
 
 rm -rf $EXTEPLAYER3_OUT_FILE
 
@@ -152,6 +158,8 @@ else
 fi
 "$CROSS_COMPILE"gcc -fdata-sections -ffunction-sections -Wl,--gc-sections -Os $CFLAGS $SYSROOT_VAR $LDFLAGS $CPPFLAGS -I"$CURR_PATH"/include  -I$FFMPEG_PATH/usr/include/ -L$FFMPEG_PATH/usr/lib/ $SOURCE_FILES -o $EXTEPLAYER3_OUT_FILE -Wfatal-errors -lpthread -lavformat -lavcodec -lavutil -lswresample 
 "$CROSS_COMPILE"strip -s $EXTEPLAYER3_OUT_FILE
+
+exit 0
 
 FFMPEG_PACK_TMP=tmp/ffmpeg/tmp/ffmpeg"$FFMPEG_VERSION"_$EPLATFORM
 rm -rf $FFMPEG_PACK_TMP 

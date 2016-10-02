@@ -36,14 +36,16 @@
 #define IPTV_MAX_FILE_PATH 1024
 
 extern int ffmpeg_av_dict_set(const char *key, const char *value, int flags);
-extern void aac_software_decoder_set(int val);
-extern void dts_software_decoder_set(int32_t val);
+extern void  aac_software_decoder_set(const int32_t val);
+extern void  dts_software_decoder_set(const int32_t val);
+extern void  wma_software_decoder_set(const int32_t val);
+extern void  ac3_software_decoder_set(const int32_t val);
+extern void eac3_software_decoder_set(const int32_t val);
+extern void  mp3_software_decoder_set(const int32_t val);
+
+extern void pcm_resampling_set(int32_t val);
 extern void stereo_software_decoder_set(int32_t val);
 extern void insert_pcm_as_lpcm_set(int32_t val);
-extern void pcm_resampling_set(int32_t val);
-extern void wma_software_decoder_set(int32_t val);
-extern void ac3_software_decoder_set(int32_t val);
-extern void eac3_software_decoder_set(int32_t val);
 extern void progressive_download_set(int32_t val);
 
 
@@ -57,14 +59,14 @@ static Context_t *g_player = NULL;
 
 static void map_inter_file_path(char *filename)
 {
-    if(strstr(filename, "iptv://") == filename)
+    if (0 == strncmp(filename, "iptv://", 7))
     {
         FILE *f = fopen(filename + 7, "r");
-        if(NULL != f)
+        if (NULL != f)
         {
             size_t num = fread(filename, 1, IPTV_MAX_FILE_PATH-1, f);
             fclose(f);
-            if(num > 0 && filename[num-1] == '\n')
+            if (num > 0 && filename[num-1] == '\n')
             {
                 filename[num-1] = '\0';
             }
@@ -185,7 +187,8 @@ static int HandleTracks(const Manager_t *ptrManager, const PlaybackCmd_t playbac
                 }
                 else // video
                 {
-                    fprintf(stderr, "{\"%c_%c\":{\"id\":%d,\"e\":\"%s\",\"n\":\"%s\",\"w\":%d,\"h\":%d,\"f\":%u,\"p\":%d}}\n", argvBuff[0], argvBuff[1], track->Id , track->Encoding, track->Name, track->width, track->height, track->frame_rate, track->progressive);
+                    fprintf(stderr, "{\"%c_%c\":{\"id\":%d,\"e\":\"%s\",\"n\":\"%s\",\"w\":%d,\"h\":%d,\"f\":%u,\"p\":%d,\"an\":%d,\"ad\":%d}}\n", \
+                    argvBuff[0], argvBuff[1], track->Id , track->Encoding, track->Name, track->width, track->height, track->frame_rate, track->progressive, track->aspect_ratio_num, track->aspect_ratio_den);
                 }
                 free(track->Encoding);
                 free(track->Name);
@@ -270,7 +273,7 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
     int digit_optind = 0;
     int aopt = 0, bopt = 0;
     char *copt = 0, *dopt = 0;
-    while ( (c = getopt(argc, argv, "wae3dlsrix:u:c:h:o:p:t:9:")) != -1) 
+    while ( (c = getopt(argc, argv, "wae3dlsrimvx:u:c:h:o:p:t:9:")) != -1) 
     {
         switch (c) 
         {
@@ -289,6 +292,10 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
         case 'd':
             printf("Software decoder will be used for DTS codec\n");
             dts_software_decoder_set(1);
+            break;
+        case 'm':
+            printf("Software decoder will be used for MP3 codec\n");
+            mp3_software_decoder_set(1);
             break;
         case 'w':
             printf("Software decoder will be used for WMA codec\n");
@@ -337,6 +344,10 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
             printf("Play in (infinity) loop.\n");
             PlaybackHandler.isLoopMode = 1;
             break;
+        case 'v':
+            printf("Use live TS stream mode.\n");
+            PlaybackHandler.isTSLiveMode = 1;
+            break;
         default:
             printf ("?? getopt returned character code 0%o ??\n", c);
             ret = -1;
@@ -378,7 +389,7 @@ int main(int argc, char* argv[])
     memset(argvBuff, '\0', sizeof(argvBuff));
     int commandRetVal = -1;
     /* inform client that we can handle additional commands */
-    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 28);
+    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 29);
 
     if (0 != ParseParams(argc, argv, file, audioFile, &audioTrackIdx, &subtitleTrackIdx))
     {
@@ -387,10 +398,12 @@ int main(int argc, char* argv[])
         printf("[-e] EAC3 software decoding\n");
         printf("[-3] AC3 software decoding\n");
         printf("[-d] DTS software decoding\n");
+        printf("[-m] MP3 software decoding\n");
         printf("[-w] WMA1, WMA2, WMA/PRO software decoding\n");
         printf("[-l] software decoder use LPCM for injection (otherwise wav PCM will be used)\n");
         printf("[-s] software decoding as stereo [downmix]\n");
         printf("[-i] play in infinity loop\n");
+        printf("[-v] switch to live TS stream mode\n");
         printf("[-o 0|1] set progressive download\n");
         printf("[-p value] nice value\n");
         printf("[-t id] audio track ID switched on at start\n");

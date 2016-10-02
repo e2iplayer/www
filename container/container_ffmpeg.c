@@ -175,6 +175,7 @@ static int32_t dts_software_decode = 0;
 static int32_t pcm_resampling = 1;
 static int32_t stereo_software_decoder = 0;
 static int32_t insert_pcm_as_lpcm = 0;
+static int32_t mp3_software_decode = 0;
 
 /* ***************************** */
 /* MISC Functions                */
@@ -187,44 +188,49 @@ static void ffmpeg_silen_callback (void * avcl, int level, const char * fmt, va_
 
 static int32_t mutexInitialized = 0;
 
-void wma_software_decoder_set(int32_t val)
+void wma_software_decoder_set(const int32_t val)
 {
     wma_software_decode = val;
 }
 
-void aac_software_decoder_set(int32_t val)
+void aac_software_decoder_set(const int32_t val)
 {
     aac_software_decode = val;
 }
 
-void ac3_software_decoder_set(int32_t val)
+void ac3_software_decoder_set(const int32_t val)
 {
     ac3_software_decode = val;
 }
 
-void eac3_software_decoder_set(int32_t val)
+void eac3_software_decoder_set(const int32_t val)
 {
     eac3_software_decode = val;
 }
 
-void dts_software_decoder_set(int32_t val)
+void dts_software_decoder_set(const int32_t val)
 {
     dts_software_decode = val;
 }
 
-void stereo_software_decoder_set(int32_t val)
+void stereo_software_decoder_set(const int32_t val)
 {
     stereo_software_decoder = val;
 }
 
-void insert_pcm_as_lpcm_set(int32_t val)
+void insert_pcm_as_lpcm_set(const int32_t val)
 {
     insert_pcm_as_lpcm = val;
 }
 
-void pcm_resampling_set(int32_t val)
+void pcm_resampling_set(const int32_t val)
 {
     pcm_resampling = val;
+}
+
+void mp3_software_decoder_set(const int32_t val)
+{
+    mp3_software_decode = val;
 }
 
 int32_t ffmpeg_av_dict_set(const char *key, const char *value, int32_t flags)
@@ -311,7 +317,7 @@ static char* Codec2Encoding(AVCodecContext *codec, int32_t *version)
     case AV_CODEC_ID_MP2:
         return "A_MPEG/L3";
     case AV_CODEC_ID_MP3:
-        return "A_MP3";
+        return (mp3_software_decode) ? "A_IPCM" : "A_MP3";
     case AV_CODEC_ID_AAC:
         return (aac_software_decode) ? "A_IPCM" : "A_AAC";
     case AV_CODEC_ID_AC3:
@@ -478,6 +484,13 @@ static void FFMPEGThread(Context_t *context)
     int64_t lastPts = -1;
     int64_t currentVideoPts = -1;
     int64_t currentAudioPts = -1;
+    
+    /* lastVideoDts and lastAudioDts 
+     * used in isTSLiveMode
+     */
+    int64_t lastVideoDts = -1;
+    int64_t lastAudioDts = -1;
+    
     int64_t showtime = 0;
     int64_t bofcount = 0;
     int32_t       err = 0;
@@ -665,14 +678,50 @@ static void FFMPEGThread(Context_t *context)
                 else
 #endif
                 {
+                    uint8_t skipPacket = 0;
                     currentVideoPts = videoTrack->pts = pts = calcPts(cAVIdx, videoTrack->stream, packet.pts);
                     videoTrack->dts = dts = calcPts(cAVIdx, videoTrack->stream, packet.dts);
 
-                    if ((currentVideoPts > latestPts) && (currentVideoPts != INVALID_PTS_VALUE))
+                    if ((currentVideoPts != INVALID_PTS_VALUE) && (currentVideoPts > latestPts))
                     {
                         latestPts = currentVideoPts;
                         update_max_injected_pts(latestPts);
                     }
+                    
+                    if (context->playback->isTSLiveMode)
+                    {
+                        if (dts != INVALID_PTS_VALUE)
+                        {   
+                            if (dts > lastVideoDts)
+                            {
+                                lastVideoDts = dts;
+                            }
+                            else
+                            {
+                                // skip already injected VIDEO packet
+                                ffmpeg_printf(200, "skip already injected VIDEO packet\n");
+                                skipPacket = 1;
+                            }
+                        }
+                        else
+                        {
+                            // skip VIDEO packet with unknown DTS
+                            ffmpeg_printf(200, "skip VIDEO packet with unknown DTS\n");
+                            skipPacket = 1;
+                        }
+                    }
+                    
+                    if (skipPacket)
+                    {   
+#if LIBAVCODEC_VERSION_MAJOR >= 56
+                        av_packet_unref(&packet);
+#else
+                        av_free_packet(&packet);
+#endif
+                        releaseMutex(__FILE__, __FUNCTION__,__LINE__);
+                        continue;
+                    }
+                    
                     ffmpeg_printf(200, "VideoTrack index = %d %lld\n",pid, currentVideoPts);
 
                     avOut.data       = packet.data;
@@ -695,12 +744,48 @@ static void FFMPEGThread(Context_t *context)
             }
             else if (audioTrack && (audioTrack->AVIdx == cAVIdx) && (audioTrack->Id == pid)) 
             {
+                uint8_t skipPacket = 0;
                 currentAudioPts = audioTrack->pts = pts = calcPts(cAVIdx, audioTrack->stream, packet.pts);
+                dts = calcPts(cAVIdx, audioTrack->stream, packet.dts);
 
                 if ((currentAudioPts != INVALID_PTS_VALUE) && (currentAudioPts > latestPts) && (!videoTrack))
                 {
                     latestPts = currentAudioPts;
                     update_max_injected_pts(latestPts);
+                }
+                
+                if (context->playback->isTSLiveMode)
+                {
+                    if (dts != INVALID_PTS_VALUE)
+                    {
+                        if (dts > lastAudioDts)
+                        {
+                            lastAudioDts = dts;
+                        }
+                        else
+                        {
+                            // skip already injected AUDIO packet
+                            ffmpeg_printf(200, "skip already injected AUDIO packet\n");
+                            skipPacket = 1;
+                        }
+                    }
+                    else
+                    {
+                        // skip AUDIO packet with unknown PTS
+                        ffmpeg_printf(200, "skip AUDIO packet with unknown PTS\n");
+                        skipPacket = 1;
+                    }
+                }
+                
+                if (skipPacket)
+                {
+#if LIBAVCODEC_VERSION_MAJOR >= 56
+                    av_packet_unref(&packet);
+#else
+                    av_free_packet(&packet);
+#endif
+                    releaseMutex(__FILE__, __FUNCTION__,__LINE__);
+                    continue;
                 }
                 
                 pcmPrivateData_t pcmExtradata;
@@ -1008,14 +1093,16 @@ static void FFMPEGThread(Context_t *context)
                     printf("{\"log\":\"Frame read error: '%s'\"}\n", errbuf);
                 }
                 
+                /*
                 if( ffmpegStatus == AVERROR(EAGAIN) )
                 {
                     continue;
                 }
+                */
                 ffmpegStatus = 0;
             }
             
-            if(!is_finish_timeout())
+            if(!is_finish_timeout() && !context->playback->isTSLiveMode)
             {
                 isWaitingForFinish = 1;
                 update_finish_timeout();
@@ -1026,7 +1113,13 @@ static void FFMPEGThread(Context_t *context)
             else
             {
                 uint8_t bEndProcess = 1;
-                if( 1 == context->playback->isLoopMode )
+                if (context->playback->isTSLiveMode)
+                {
+                    seek_target_bytes = 0;
+                    do_seek_target_bytes = 1;
+                    bEndProcess = 0;
+                }
+                else if( 1 == context->playback->isLoopMode )
                 {
                     int64_t tmpLength = 0;
                     if( 0 == container_ffmpeg_get_length(context, &tmpLength) && tmpLength > 0 && get_play_pts() > 0)
@@ -1074,6 +1167,8 @@ static void FFMPEGThread(Context_t *context)
 #endif
         releaseMutex(__FILE__, __FUNCTION__,__LINE__);
     } /* while */
+    
+    printf("END WILE\n");
 
     if (swr)
     {
@@ -1195,6 +1290,13 @@ int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int
     {
         av_dict_set(&avio_opts, "timeout", "20000000", 0); //20sec
         av_dict_set(&avio_opts, "reconnect", "1", 0);
+        if (context->playback->isTSLiveMode) // special mode for live TS stream with skip packet 
+        {
+            av_dict_set(&avio_opts, "seekable", "0", 0);
+            av_dict_set(&avio_opts, "reconnect_at_eof", "1", 0);
+            av_dict_set(&avio_opts, "reconnect_streamed", "1", 0);
+        }
+        
         if ((err = avformat_open_input(&avContextTab[AVIdx], filename, NULL, &avio_opts)) != 0)
         {
             char error[512];
@@ -1256,7 +1358,7 @@ int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int
     }
 
 //for buffered io
-    if(avContextTab[AVIdx] != NULL && avContextTab[AVIdx]->pb != NULL)
+    if(avContextTab[AVIdx] != NULL && avContextTab[AVIdx]->pb != NULL && !context->playback->isTSLiveMode)
     {
         ffmpeg_real_read_org = avContextTab[AVIdx]->pb->read_packet;
         
@@ -1462,6 +1564,15 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
 
                     track.width          = stream->codec->width;
                     track.height         = stream->codec->height;
+                    
+                    /* We will return here PAR (Pixel Aspect Ratio) client need to calculate DAR(Display Aspect Ratio)
+                     * example: PAR 64:45 DAR 16:9
+                     *          Resolution 720x576
+                     * Display aspect ratio = (720*64)/(576*45) = 16/9
+                     * 0:1 is the value for invalid/unset aspect ratio -> https://trac.ffmpeg.org/ticket/3798
+                     */
+                    track.aspect_ratio_num = stream->sample_aspect_ratio.num;
+                    track.aspect_ratio_den = stream->sample_aspect_ratio.den;
 
                     track.extraData      = stream->codec->extradata;
                     track.extraSize      = stream->codec->extradata_size;
@@ -1480,17 +1591,19 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                     {
                         track.TimeScale = 1000;
                     }
+                    
+                    ffmpeg_printf(10, "bit_rate       [%d]\n",stream->codec->bit_rate);
+                    ffmpeg_printf(10, "flags          [%d]\n",stream->codec->flags);
+                    ffmpeg_printf(10, "frame_bits     [%d]\n",stream->codec->frame_bits);
+                    ffmpeg_printf(10, "time_base.den  [%d]\n",stream->time_base.den);
+                    ffmpeg_printf(10, "time_base.num  [%d]\n",stream->time_base.num);
+                    ffmpeg_printf(10, "width          [%d]\n",stream->codec->width);
+                    ffmpeg_printf(10, "height         [%d]\n",stream->codec->height);
+                    ffmpeg_printf(10, "frame_rate num [%d]\n",stream->r_frame_rate.num);
+                    ffmpeg_printf(10, "frame_rate den [%d]\n",stream->r_frame_rate.den);
 
-                    ffmpeg_printf(10, "bit_rate = %d\n",stream->codec->bit_rate);
-                    ffmpeg_printf(10, "flags = %d\n",stream->codec->flags);
-                    ffmpeg_printf(10, "frame_bits = %d\n",stream->codec->frame_bits);
-                    ffmpeg_printf(10, "time_base.den %d\n",stream->time_base.den);
-                    ffmpeg_printf(10, "time_base.num %d\n",stream->time_base.num);
-                    ffmpeg_printf(10, "frame_rate %d\n",stream->r_frame_rate.num);
-                    ffmpeg_printf(10, "TimeScale %d\n",stream->r_frame_rate.den);
-
-                    ffmpeg_printf(10, "frame_rate %lld\n", track.frame_rate);
-                    ffmpeg_printf(10, "TimeScale %d\n", track.TimeScale);
+                    ffmpeg_printf(10, "frame_rate     [%u]\n", track.frame_rate);
+                    ffmpeg_printf(10, "TimeScale      [%d]\n", track.TimeScale);
 
                     track.Name      = "und";
                     track.Encoding  = encoding;

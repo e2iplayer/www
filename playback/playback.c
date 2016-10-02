@@ -726,4 +726,5 @@ PlaybackHandler_t PlaybackHandler = {
     0,          //size
     0,          //noprobe
     0,          //isLoopMode
+    0,          //isTSLiveMode
 };

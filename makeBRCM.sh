@@ -6,7 +6,7 @@ function usage {
    echo "Usage:"
    echo "$0 platform ffmpeg_ver"
    echo "platform:       mipsel | mipsel_softfpu | armv7 | armv5t"
-   echo "ffmpeg_ver:     2.8.5 | 3.0"
+   echo "ffmpeg_ver:     2.8.5 | 3.0 | 3.1.1"
    exit 1
 }
 
@@ -24,9 +24,9 @@ then
     usage
 fi
 
-if [ "$FFMPEG_VERSION" != "2.8.5" -a "$FFMPEG_VERSION" != "3.0" ];
+if [ "$FFMPEG_VERSION" != "2.8.5" -a "$FFMPEG_VERSION" != "3.0" -a "$FFMPEG_VERSION" != "3.1.1" ];
 then
-    echo "Please give supported ffmpeg (2.8.5|3.0) version!"
+    echo "Please give supported ffmpeg (2.8.5|3.0|3.1.1) version!"
     usage
 fi
 
@@ -111,12 +111,13 @@ function buildFFmpeg
 {
     FFMPEG_VERSION=$1
     FFMPEG_BASE_PATH=$CURR_PATH"/tmp/ffmpeg/"
-    FFMPEG_PATH=$FFMPEG_BASE_PATH"tmp/ffmpeg-"$FFMPEG_VERSION
+    mkdir -p $FFMPEG_BASE_PATH"tmp/$EPLATFORM/"
+    FFMPEG_PATH=$FFMPEG_BASE_PATH"tmp/$EPLATFORM/ffmpeg-"$FFMPEG_VERSION
     
     SOURCE_URL="http://ffmpeg.org/releases/ffmpeg-"$FFMPEG_VERSION".tar.gz"
-    OUT_FILE=$FFMPEG_PATH".tar.gz"
+    OUT_FILE=$FFMPEG_BASE_PATH"tmp/ffmpeg-"$FFMPEG_VERSION".tar.gz"
     
-    if [ "true" == "$2" ];
+    if [ "true" == "$2" ] || [ ! -d $FFMPEG_PATH ];
     then
         if [ -d $FFMPEG_PATH ] && [ "true" == "$3"  ];
         then
@@ -128,9 +129,9 @@ function buildFFmpeg
             wget $SOURCE_URL -O $OUT_FILE
         fi
         
-        if [ "true" == "$3" ];
+        if [ ! -d $FFMPEG_PATH ];
         then
-            tar -zxf $OUT_FILE -C $FFMPEG_BASE_PATH"tmp/"
+            tar -zxf $OUT_FILE -C $FFMPEG_BASE_PATH"tmp/$EPLATFORM/"
         fi
         
         CONFIGURE_PATH=$FFMPEG_BASE_PATH"/scripts_$EPLATFORM/configure_"$FFMPEG_VERSION".sh"
@@ -143,7 +144,8 @@ function buildFFmpeg
     fi
 }
 
-buildFFmpeg $FFMPEG_VERSION "false" "false" # "false" "true"
+# rebuild ffmpeg libs, force rebuild
+buildFFmpeg $FFMPEG_VERSION "false" "false"
 
 rm -rf $EXTEPLAYER3_OUT_FILE
 

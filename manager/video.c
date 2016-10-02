@@ -237,12 +237,14 @@ static int Command(void  *_context, ManagerCmd_t command, void * argument) {
             if (track)
             {
                 memset(track, 0, sizeof(TrackDescription_t));
-                track->Id         = Tracks[CurrentTrack].Id;
-                track->Name       = strdup(Tracks[CurrentTrack].Name);
-                track->Encoding   = strdup(Tracks[CurrentTrack].Encoding);
-                track->frame_rate = Tracks[CurrentTrack].frame_rate;
-                track->width      = Tracks[CurrentTrack].width;
-                track->height     = Tracks[CurrentTrack].height;
+                track->Id                   = Tracks[CurrentTrack].Id;
+                track->Name                 = strdup(Tracks[CurrentTrack].Name);
+                track->Encoding             = strdup(Tracks[CurrentTrack].Encoding);
+                track->frame_rate           = Tracks[CurrentTrack].frame_rate;
+                track->width                = Tracks[CurrentTrack].width;
+                track->height               = Tracks[CurrentTrack].height;
+                track->aspect_ratio_num     = Tracks[CurrentTrack].aspect_ratio_num;
+                track->aspect_ratio_den     = Tracks[CurrentTrack].aspect_ratio_den;
                 context->output->video->Command(context, OUTPUT_GET_PROGRESSIVE, &(track->progressive));
             }
         }
