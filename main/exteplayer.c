@@ -42,13 +42,12 @@ extern void  wma_software_decoder_set(const int32_t val);
 extern void  ac3_software_decoder_set(const int32_t val);
 extern void eac3_software_decoder_set(const int32_t val);
 extern void  mp3_software_decoder_set(const int32_t val);
+extern void rtmp_proto_impl_set(const int32_t val);
 
 extern void pcm_resampling_set(int32_t val);
 extern void stereo_software_decoder_set(int32_t val);
 extern void insert_pcm_as_lpcm_set(int32_t val);
 extern void progressive_download_set(int32_t val);
-
-
 
 extern OutputHandler_t         OutputHandler;
 extern PlaybackHandler_t       PlaybackHandler;
@@ -273,7 +272,7 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
     int digit_optind = 0;
     int aopt = 0, bopt = 0;
     char *copt = 0, *dopt = 0;
-    while ( (c = getopt(argc, argv, "wae3dlsrimvx:u:c:h:o:p:t:9:")) != -1) 
+    while ( (c = getopt(argc, argv, "wae3dlsrimvn:x:u:c:h:o:p:t:9:")) != -1) 
     {
         switch (c) 
         {
@@ -348,6 +347,10 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
             printf("Use live TS stream mode.\n");
             PlaybackHandler.isTSLiveMode = 1;
             break;
+        case 'n':
+            printf("Force rtmp protocol implementation\n");
+            rtmp_proto_impl_set(atoi(optarg));
+            break;
         default:
             printf ("?? getopt returned character code 0%o ??\n", c);
             ret = -1;
@@ -389,7 +392,7 @@ int main(int argc, char* argv[])
     memset(argvBuff, '\0', sizeof(argvBuff));
     int commandRetVal = -1;
     /* inform client that we can handle additional commands */
-    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 29);
+    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 30);
 
     if (0 != ParseParams(argc, argv, file, audioFile, &audioTrackIdx, &subtitleTrackIdx))
     {
@@ -404,6 +407,7 @@ int main(int argc, char* argv[])
         printf("[-s] software decoding as stereo [downmix]\n");
         printf("[-i] play in infinity loop\n");
         printf("[-v] switch to live TS stream mode\n");
+        printf("[-n 0|1|2] rtmp force protocol implementation auto(0) native/ffmpeg(1) or librtmp(2)\n");        
         printf("[-o 0|1] set progressive download\n");
         printf("[-p value] nice value\n");
         printf("[-t id] audio track ID switched on at start\n");
@@ -436,7 +440,7 @@ int main(int argc, char* argv[])
     g_player->output->Command(g_player, OUTPUT_ADD, "subtitle");
 
     g_player->manager->video->Command(g_player, MANAGER_REGISTER_UPDATED_TRACK_INFO, UpdateVideoTrack);
-    if (strncmp(file, "rtmp", 4))
+    if (strncmp(file, "rtmp", 4) && strncmp(file, "ffrtmp", 4))
     {
         g_player->playback->noprobe = 1;
     }

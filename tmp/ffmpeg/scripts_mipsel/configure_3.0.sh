@@ -36,6 +36,7 @@
 --disable-vda \
 --disable-vdpau \
 --enable-nonfree \
+--enable-librtmp \
 --extra-cflags=" $FFMPEG_CFLAGS " \
 --extra-ldflags=" $FFMPEG_LDFLAGS "
 

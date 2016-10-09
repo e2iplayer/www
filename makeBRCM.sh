@@ -38,6 +38,7 @@ case "$EPLATFORM" in
         export SYSROOT=$BASE_PATH"et4x00"
         CFLAGS="  -mel -mabi=32 -march=mips32 "
         FFMPEG_CFLAGS=" -mel -mabi=32 -march=mips32 "
+        FFMPEG_LDFLAGS=" -lrtmp "
         ;;
     mipsel_softfpu)
         BASE_PATH="/mnt/new2/softFPU/openpli/build/tmp/sysroots/"
@@ -136,7 +137,7 @@ function buildFFmpeg
         
         CONFIGURE_PATH=$FFMPEG_BASE_PATH"/scripts_$EPLATFORM/configure_"$FFMPEG_VERSION".sh"
         
-        $FFMPEG_BASE_PATH"/scripts_$EPLATFORM/make.sh" $FFMPEG_PATH $CONFIGURE_PATH $SYSROOT "$FFMPEG_CFLAGS"
+        $FFMPEG_BASE_PATH"/scripts_$EPLATFORM/make.sh" $FFMPEG_PATH $CONFIGURE_PATH $SYSROOT "$FFMPEG_CFLAGS" "$FFMPEG_LDFLAGS"
     else
         #CONFIGURE_PATH=$FFMPEG_BASE_PATH"/scripts_$EPLATFORM/configure_"$FFMPEG_VERSION".sh"
         #$FFMPEG_BASE_PATH"/scripts_$EPLATFORM/make.sh" $FFMPEG_PATH $CONFIGURE_PATH $SYSROOT
@@ -159,7 +160,7 @@ FFMPEG_PACK_TMP=tmp/ffmpeg/tmp/ffmpeg"$FFMPEG_VERSION"_$EPLATFORM
 rm -rf $FFMPEG_PACK_TMP 
 mkdir $FFMPEG_PACK_TMP
 
-cp -R tmp/ffmpeg/tmp/ffmpeg-"$FFMPEG_VERSION"/usr $FFMPEG_PACK_TMP"/usr"
+cp -R tmp/ffmpeg/tmp/$EPLATFORM/ffmpeg-"$FFMPEG_VERSION"/usr $FFMPEG_PACK_TMP"/usr"
 cd  $FFMPEG_PACK_TMP
 rm -Rf usr/include
 rm -Rf usr/share

@@ -107,6 +107,7 @@ if (debug_level >= level) printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); 
 /* ***************************** */
 /* Types                         */
 /* ***************************** */
+typedef enum {RTMP_NATIVE, RTMP_LIBRTMP, RTMP_NONE} eRTMPProtoImplType;
 
 /* ***************************** */
 /* Varaibles                     */
@@ -176,6 +177,7 @@ static int32_t pcm_resampling = 1;
 static int32_t stereo_software_decoder = 0;
 static int32_t insert_pcm_as_lpcm = 0;
 static int32_t mp3_software_decode = 0;
+static int32_t rtmp_proto_impl = 0; // 0 - auto, 1 - native, 2 - librtmp
 
 /* ***************************** */
 /* MISC Functions                */
@@ -231,6 +233,11 @@ void pcm_resampling_set(const int32_t val)
 void mp3_software_decoder_set(const int32_t val)
 {
     mp3_software_decode = val;
+}
+
+void rtmp_proto_impl_set(const int32_t val)
+{
+    rtmp_proto_impl = val;
 }
 
 int32_t ffmpeg_av_dict_set(const char *key, const char *value, int32_t flags)
@@ -1167,8 +1174,6 @@ static void FFMPEGThread(Context_t *context)
 #endif
         releaseMutex(__FILE__, __FUNCTION__,__LINE__);
     } /* while */
-    
-    printf("END WILE\n");
 
     if (swr)
     {
@@ -1264,13 +1269,14 @@ AVIOContext* container_ffmpeg_get_avio_context(char *filename, size_t avio_ctx_b
 int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int32_t AVIdx)
 {
     int32_t err = 0;
+    AVInputFormat *fmt = NULL;
     avContextTab[AVIdx] = avformat_alloc_context();
     avContextTab[AVIdx]->interrupt_callback.callback = interrupt_cb;
     avContextTab[AVIdx]->interrupt_callback.opaque = context->playback;
 
 #ifdef SAM_CUSTOM_IO
-    if(strstr(filename, "://") == 0 || 
-       strstr(filename, "file://") == filename)
+    if(0 == strstr(filename, "://") || 
+       0 == strncmp(filename, "file://", 7))
     {
         AVIOContext *avio_ctx = container_ffmpeg_get_avio_context(filename, 4096);
         if(avio_ctx)
@@ -1285,8 +1291,198 @@ int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int
     }
 #endif
 
-    if(strstr(filename, "http://") == filename || 
-       strstr(filename, "https://") == filename)
+    AVDictionary **pavio_opts = NULL;
+    eRTMPProtoImplType rtmpProtoImplType = RTMP_NONE;
+    if (0 == strncmp(filename, "ffrtmp", 6))
+    {
+        filename = filename + 2;
+        rtmpProtoImplType = RTMP_NATIVE;
+    }
+    
+    if (1 == rtmp_proto_impl)
+    {
+        rtmpProtoImplType = RTMP_NATIVE;
+    } 
+    else if (2 == rtmp_proto_impl)
+    {
+        rtmpProtoImplType = RTMP_LIBRTMP;
+    }
+
+    if (0 == strncmp(filename, "rtmp://", 7) ||
+        0 == strncmp(filename, "rtmpe://", 8) ||
+        0 == strncmp(filename, "rtmps://", 8) ||
+        0 == strncmp(filename, "rtmpt://", 8) ||
+        0 == strncmp(filename, "rtmpte://", 9) ||
+        0 == strncmp(filename, "rtmpts://", 9))
+    {
+        /* At first we need to check which protocol 
+         * implementations we have
+         */
+        void *opaque = NULL;
+        const char *protoName = NULL;
+        uint8_t haveNativeProto = 0;
+        uint8_t numOfRTMPImpl = 0;
+        
+        while (protoName = avio_enum_protocols(&opaque, 1))
+        {
+            if (0 == strcmp("rtmp", protoName))
+            {
+                ++numOfRTMPImpl;
+            }
+            else if (0 == strcmp("ffrtmp", protoName))
+            {
+                // ffmpeg has patch to have both native and librtmp implementations
+                ++numOfRTMPImpl;
+                haveNativeProto = 2;
+            }
+            else if (0 == strncmp("rtmpts", protoName, 6))
+            {
+                // rtmpts is only available in native implementation
+                // rtmpts is listed after rtmp
+                haveNativeProto = 1;
+            }
+        }
+        
+        if (haveNativeProto > 0)
+        {
+            if (numOfRTMPImpl > 1) // we have both
+            {
+                if (rtmpProtoImplType == RTMP_NONE)
+                {
+                    /* if we have both impl, we will prefer native
+                     * unless uri contain param wich can be understandable
+                     * only by by librtmp
+                     */
+                    if (strstr(filename, " token=") || 
+                        strstr(filename, " jtv="))
+                    {
+                        rtmpProtoImplType = RTMP_LIBRTMP;
+                    }
+                    else
+                    {
+                        rtmpProtoImplType = RTMP_NATIVE;
+                    }
+                }
+            }
+            else
+            {
+                rtmpProtoImplType = RTMP_NATIVE;
+            }
+        }
+        else
+        {
+            rtmpProtoImplType = RTMP_LIBRTMP;
+        }
+        
+        if (RTMP_NATIVE == rtmpProtoImplType)
+        {
+            char *baseUri = strdup(filename);
+            char *token  = NULL;
+            
+            // check if uri have additional params
+            if ((token = strtok(baseUri, " ")) != NULL )
+            {
+                char *conn = malloc(strlen(token));
+                char *poseq, *key, *value;
+                conn[0] = '\0';
+                token = NULL;
+                while((token = strtok(token, " ")) != NULL)
+                {
+                    if ((poseq = strchr(token, '=')) != NULL)
+                    {
+                        *poseq = '\0';
+                        key = token;
+                        value = poseq + 1;
+                        ffmpeg_printf(20, "rtmp_key = \"%s\", rtmp_value = \"%s\"\n", key, value);
+                        /* translate librtmp connection parameters to ffmpeg ones routin provided by @mx3L
+                         *
+                         * librtmp parameters     - https://rtmpdump.mplayerhq.hu/librtmp.3.html
+                         * ffmpeg rtmp parameters - https://ffmpeg.org/ffmpeg-protocols.html#rtmp
+                         */
+                        if (!strcmp(key, "app"))
+                        {
+                            av_dict_set(&avio_opts, "rtmp_app", value, 0);
+                        }
+                        else if (!strcmp(key, "conn"))
+                        {
+                            if (conn[0] != '\0')
+                            {
+                                strcat(conn, " ");
+                            }
+                            strcat(conn, value);
+                        }
+                        else if (!strcmp(key, "buffer"))
+                        {
+                            av_dict_set(&avio_opts, "rtmp_buffer", value, 0);
+                        }
+                        else if (!strcmp(key, "flashVer"))
+                        {
+                            av_dict_set(&avio_opts, "rtmp_flashver", value, 0);
+                        }
+                        else if (!strcmp(key, "live"))
+                        {
+                            av_dict_set(&avio_opts, "rtmp_live", value, 0);
+                        }
+                        else if (!strcmp(key, "pageUrl"))
+                        {
+                            av_dict_set(&avio_opts, "rtmp_pageurl", value, 0);
+                        }
+                        else if (!strcmp(key, "playpath"))
+                        {
+                            av_dict_set(&avio_opts, "rtmp_playpath", value, 0);
+                        }
+                        else if (!strcmp(key, "subscribe"))
+                        {
+                            av_dict_set(&avio_opts, "rtmp_subscribe", value, 0);
+                        }
+                        else if (!strcmp(key, "swfUrl"))
+                        {
+                            av_dict_set(&avio_opts, "rtmp_swfurl", value, 0);
+                        }
+                        else if (!strcmp(key, "swfVfy"))
+                        {
+                            av_dict_set(&avio_opts, "rtmp_swfverify", value, 0);
+                        }
+                        else if (!strcmp(key, "tcUrl"))
+                        {
+                            av_dict_set(&avio_opts, "rtmp_tcurl", value, 0);
+                        }
+                        else
+                        {
+                            // threat as direct options
+                            // for example rtmp_swfhash, rtmp_swfsize
+                            av_dict_set(&avio_opts, key, value, 0);
+                        }
+                    }
+                    token = NULL;
+                }
+                
+                if (conn[0] != '\0')
+                {
+                    av_dict_set(&avio_opts, "rtmp_conn", conn, 0);
+                }
+                free(conn);
+                
+                pavio_opts = &avio_opts;
+            }
+            
+            if (RTMP_NATIVE == rtmpProtoImplType && 2 == haveNativeProto)
+            {
+                filename = malloc(strlen(baseUri) + 2 + 1);
+                strncpy(filename, "ff", 2);
+                strcpy(filename+2, baseUri);
+                free(baseUri);
+                // memory leak, only once, so does not matter
+            }
+            else
+            {
+                filename = baseUri;
+                // memory leak, only once, so does not matter
+            }
+        }
+    }
+    else if(0 == strncmp(filename, "http://", 7) || 
+            0 == strncmp(filename, "https://", 8))
     {
         av_dict_set(&avio_opts, "timeout", "20000000", 0); //20sec
         av_dict_set(&avio_opts, "reconnect", "1", 0);
@@ -1296,30 +1492,16 @@ int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int
             av_dict_set(&avio_opts, "reconnect_at_eof", "1", 0);
             av_dict_set(&avio_opts, "reconnect_streamed", "1", 0);
         }
-        
-        if ((err = avformat_open_input(&avContextTab[AVIdx], filename, NULL, &avio_opts)) != 0)
-        {
-            char error[512];
-
-            ffmpeg_err("avformat_open_input failed %d (%s)\n", err, filename);
-            av_strerror(err, error, 512);
-            ffmpeg_err("Cause: %s\n", error);
-
-            if(avio_opts != NULL)
-            {
-                av_dict_free(&avio_opts);
-            }
-            releaseMutex(__FILE__, __FUNCTION__,__LINE__);
-            return cERR_CONTAINER_FFMPEG_OPEN;
-        }
+        pavio_opts = &avio_opts;
     }
-    else if ((err = avformat_open_input(&avContextTab[AVIdx], filename, NULL, 0)) != 0)
+    
+    if ((err = avformat_open_input(&avContextTab[AVIdx], filename, fmt, pavio_opts)) != 0)
     {
-        char error[512] = "";
+        char error[512];
 
         ffmpeg_err("avformat_open_input failed %d (%s)\n", err, filename);
         av_strerror(err, error, 512);
-        ffmpeg_err("Cause: %s\n", error);
+        fprintf(stderr, "{\"FF_ERROR\":{\"msg\":\"%s\",\"code\":%i}}\n", error, err);
 
         if(avio_opts != NULL)
         {
@@ -1363,7 +1545,7 @@ int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int
         ffmpeg_real_read_org = avContextTab[AVIdx]->pb->read_packet;
         
         if(0 ==AVIdx && strstr(filename, "://") != 0 && 
-           strstr(filename, "file://") != filename)
+           strncmp(filename, "file://", 7) != 0)
         {
             if(ffmpeg_buf_size > 0 && ffmpeg_buf_size > FILLBUFDIFF + FILLBUFPAKET)
             {
@@ -1573,6 +1755,11 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                      */
                     track.aspect_ratio_num = stream->sample_aspect_ratio.num;
                     track.aspect_ratio_den = stream->sample_aspect_ratio.den;
+                    if (0 == track.aspect_ratio_num  || 0 == track.aspect_ratio_den)
+                    {
+                        track.aspect_ratio_num = stream->codec->sample_aspect_ratio.num;
+                        track.aspect_ratio_den = stream->codec->sample_aspect_ratio.den;
+                    }
 
                     track.extraData      = stream->codec->extradata;
                     track.extraSize      = stream->codec->extradata_size;
@@ -1699,7 +1886,7 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                         {
                             ffmpeg_printf(10, "Create AAC ExtraData\n");
                             ffmpeg_printf(10, "stream->codec->extradata_size %d\n", stream->codec->extradata_size);
-                            Hexdump(stream->codec->extradata, stream->codec->extradata_size);
+                            //Hexdump(stream->codec->extradata, stream->codec->extradata_size);
 
                             /*  extradata:
                                 13 10 56 e5 9d 48 00 (anderen cops)
@@ -1746,8 +1933,8 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                             track.aacbuf[5] = 0x1F;
                             track.aacbuf[6] = 0xFC;
 
-                            printf("AAC_HEADER -> ");
-                            Hexdump(track.aacbuf,7);
+                            //printf("AAC_HEADER -> ");
+                            //Hexdump(track.aacbuf,7);
                             track.have_aacheader = 1;
                         }
                         /*
@@ -1894,7 +2081,7 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                         memcpy(data, codec_data_pointer, codec_data_size);
 #endif
                         ffmpeg_printf(1, "aacbuf:\n");
-                        Hexdump(track.aacbuf, track.aacbuflen);
+                        //Hexdump(track.aacbuf, track.aacbuflen);
 
                         //ffmpeg_printf(1, "priv_data:\n");
                         //Hexdump(stream->codec->priv_data, track.aacbuflen);
