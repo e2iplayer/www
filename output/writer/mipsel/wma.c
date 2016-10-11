@@ -164,6 +164,8 @@ static int writeData(void* _call)
     memcpy(PesHeader + headerSize, call->private_data, call->private_size);
     headerSize += call->private_size;
     
+    PesHeader[6] |= 1;
+
     struct iovec iov[2];
     iov[0].iov_base = PesHeader;
     iov[0].iov_len  = headerSize;

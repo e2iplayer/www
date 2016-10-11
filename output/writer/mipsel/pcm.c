@@ -276,6 +276,8 @@ static int32_t writeData(void *_call)
         memcpy(PesHeader + headerSize, codec_data, sizeof(codec_data));
         headerSize += sizeof(codec_data);
 
+        PesHeader[6] |= 1;
+
         struct iovec iov[2];
         iov[0].iov_base = PesHeader;
         iov[0].iov_len  = headerSize;
