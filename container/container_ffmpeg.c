@@ -1382,9 +1382,13 @@ int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int
             // check if uri have additional params
             if ((token = strtok(baseUri, " ")) != NULL )
             {
-                char *conn = malloc(strlen(token));
+                char *conn = malloc(strlen(filename));
+                char *swfUrl = malloc(strlen(filename));
+                char *swfVfy = malloc(strlen(filename));
                 char *poseq, *key, *value;
                 conn[0] = '\0';
+                swfUrl[0] = '\0';
+                swfVfy[0] = '\0';
                 token = NULL;
                 while((token = strtok(token, " ")) != NULL)
                 {
@@ -1437,15 +1441,21 @@ int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int
                         }
                         else if (!strcmp(key, "swfUrl"))
                         {
-                            av_dict_set(&avio_opts, "rtmp_swfurl", value, 0);
+                            strcpy(swfUrl, value);
                         }
+                        // ffmpeg expects this value to contain url to player swf
+                        // not a 1|0|TRUE like librtmp
                         else if (!strcmp(key, "swfVfy"))
                         {
-                            av_dict_set(&avio_opts, "rtmp_swfverify", value, 0);
+                            strcpy(swfVfy, value);
                         }
                         else if (!strcmp(key, "tcUrl"))
                         {
                             av_dict_set(&avio_opts, "rtmp_tcurl", value, 0);
+                        }
+                        // timeout is ment for incoming connections
+                        else if (!strcmp(key, "timeout"))
+                        {
                         }
                         else
                         {
@@ -1462,11 +1472,25 @@ int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int
                     av_dict_set(&avio_opts, "rtmp_conn", conn, 0);
                 }
                 free(conn);
-                
+
+                if (swfUrl[0] != '\0')
+                {
+                    if (swfVfy[0] == '1' || !strncasecmp(swfVfy, "true", 4))
+                    {
+                        av_dict_set(&avio_opts, "rtmp_swfverify", swfUrl, 0);
+                    }
+                    else
+                    {
+                        av_dict_set(&avio_opts, "rtmp_swfurl", swfUrl, 0);
+                    }
+                }
+                free(swfUrl);
+                free(swfVfy);
+
                 pavio_opts = &avio_opts;
             }
             
-            if (RTMP_NATIVE == rtmpProtoImplType && 2 == haveNativeProto)
+            if (2 == haveNativeProto)
             {
                 filename = malloc(strlen(baseUri) + 2 + 1);
                 strncpy(filename, "ff", 2);
