@@ -1403,11 +1403,11 @@ int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int
                          * librtmp parameters     - https://rtmpdump.mplayerhq.hu/librtmp.3.html
                          * ffmpeg rtmp parameters - https://ffmpeg.org/ffmpeg-protocols.html#rtmp
                          */
-                        if (!strcmp(key, "app"))
+                        if (!strcasecmp(key, "app"))
                         {
                             av_dict_set(&avio_opts, "rtmp_app", value, 0);
                         }
-                        else if (!strcmp(key, "conn"))
+                        else if (!strcasecmp(key, "conn"))
                         {
                             if (conn[0] != '\0')
                             {
@@ -1415,46 +1415,46 @@ int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int
                             }
                             strcat(conn, value);
                         }
-                        else if (!strcmp(key, "buffer"))
+                        else if (!strcasecmp(key, "buffer"))
                         {
                             av_dict_set(&avio_opts, "rtmp_buffer", value, 0);
                         }
-                        else if (!strcmp(key, "flashVer"))
+                        else if (!strcasecmp(key, "flashVer"))
                         {
                             av_dict_set(&avio_opts, "rtmp_flashver", value, 0);
                         }
-                        else if (!strcmp(key, "live"))
+                        else if (!strcasecmp(key, "live"))
                         {
                             av_dict_set(&avio_opts, "rtmp_live", value, 0);
                         }
-                        else if (!strcmp(key, "pageUrl"))
+                        else if (!strcasecmp(key, "pageUrl"))
                         {
                             av_dict_set(&avio_opts, "rtmp_pageurl", value, 0);
                         }
-                        else if (!strcmp(key, "playpath"))
+                        else if (!strcasecmp(key, "playpath"))
                         {
                             av_dict_set(&avio_opts, "rtmp_playpath", value, 0);
                         }
-                        else if (!strcmp(key, "subscribe"))
+                        else if (!strcasecmp(key, "subscribe"))
                         {
                             av_dict_set(&avio_opts, "rtmp_subscribe", value, 0);
                         }
-                        else if (!strcmp(key, "swfUrl"))
+                        else if (!strcasecmp(key, "swfUrl"))
                         {
                             strcpy(swfUrl, value);
                         }
                         // ffmpeg expects this value to contain url to player swf
                         // not a 1|0|TRUE like librtmp
-                        else if (!strcmp(key, "swfVfy"))
+                        else if (!strcasecmp(key, "swfVfy"))
                         {
                             strcpy(swfVfy, value);
                         }
-                        else if (!strcmp(key, "tcUrl"))
+                        else if (!strcasecmp(key, "tcUrl"))
                         {
                             av_dict_set(&avio_opts, "rtmp_tcurl", value, 0);
                         }
                         // timeout is ment for incoming connections
-                        else if (!strcmp(key, "timeout"))
+                        else if (!strcasecmp(key, "timeout"))
                         {
                         }
                         else
