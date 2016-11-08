@@ -22,8 +22,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sched.h>
+#include <signal.h>
 
 #include <sys/ioctl.h>
+#include <sys/prctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -431,6 +433,9 @@ int main(int argc, char* argv[])
     g_player->output      = &OutputHandler;
     g_player->container   = &ContainerHandler;
     g_player->manager     = &ManagerHandler;
+
+    // make sure to kill myself when parent dies
+    prctl(PR_SET_PDEATHSIG, SIGKILL);
 
     SetBuffering();
     
