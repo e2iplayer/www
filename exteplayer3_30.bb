@@ -7,7 +7,7 @@ LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/GPL-2.0;md5=801f80980d171dd6425
 DEPENDS = "ffmpeg"
 RDEPENDS_${PN} = "ffmpeg"
 
-SRCREV = "921d3e0958425bc9b202e94b4ecc1d9340fea7e6"
+SRCREV = "82b46830a9ed6c3d74fc82934974f01944c9f850"
 SRC_URI = "git://github.com/samsamsam-iptvplayer/exteplayer3.git;branch=master"
 
 S = "${WORKDIR}/git/"
@@ -25,7 +25,7 @@ SOURCE_FILES =+ "output/writer/common/pes.c"
 SOURCE_FILES =+ "output/writer/common/misc.c"
 SOURCE_FILES =+ "playback/playback.c"
 
-SOURCE_FILES =+ "${@base_contains("TARGET_ARCH", "sh4", "\
+SOURCE_FILES =+ "${@bb.utils.contains("TARGET_ARCH", "sh4", "\
 output/linuxdvb_sh4.c \
 output/writer/sh4/writer.c \
 output/writer/sh4/aac.c \
