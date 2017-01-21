@@ -55,6 +55,7 @@ output/writer/mipsel/h263.c \
 output/writer/mipsel/mpeg2.c \
 output/writer/mipsel/mpeg4.c \
 output/writer/mipsel/divx3.c \
+output/writer/mipsel/vp.c \
 output/writer/mipsel/vc1.c ", d)}"
 
 do_compile() {
