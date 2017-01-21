@@ -291,6 +291,10 @@ static char* Codec2Encoding(AVCodecContext *codec, int32_t *version)
     case AV_CODEC_ID_VP6:
     case AV_CODEC_ID_VP6F:
         return "V_VP6";
+    case AV_CODEC_ID_VP8:
+        return "V_VP8";
+    case AV_CODEC_ID_VP9:
+        return "V_VP9";
     case AV_CODEC_ID_RV10:
     case AV_CODEC_ID_RV20:
         return "V_RMV";
@@ -2789,7 +2793,7 @@ static int32_t Command(void  *_context, ContainerCmd_t command, void *argument)
     return ret;
 }
 
-static char *FFMPEG_Capabilities[] = {"avi", "mkv", "mp4", "ts", "mov", "flv", "flac", "mp3", "mpg", "m2ts", "vob", "evo", "wmv","wma", "asf", "mp2", "m4v", "m4a", "fla", "divx", "dat", "mpeg", "trp", "mts", "vdr", "ogg", "wav", "wtv", "asx", "mvi", "png", "jpg", "ra", "ram", "rm", "3gp", "amr", NULL };
+static char *FFMPEG_Capabilities[] = {"avi", "mkv", "mp4", "ts", "mov", "flv", "flac", "mp3", "mpg", "m2ts", "vob", "evo", "wmv","wma", "asf", "mp2", "m4v", "m4a", "fla", "divx", "dat", "mpeg", "trp", "mts", "vdr", "ogg", "wav", "wtv", "asx", "mvi", "png", "jpg", "ra", "ram", "rm", "3gp", "amr", "webm", NULL };
 
 Container_t FFMPEGContainer = {
     "FFMPEG",
