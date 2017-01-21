@@ -18,16 +18,22 @@ typedef struct video_codec_data
 } video_codec_data_t;
 #define VIDEO_SET_CODEC_DATA _IOW('o', 80, video_codec_data_t)
 
-typedef enum { 
-    CT_MPEG1, 
-    CT_MPEG2, 
-    CT_H264, 
-    CT_DIVX311, 
-    CT_DIVX4, 
-    CT_MPEG4_PART2, 
-    CT_VC1, 
-    CT_VC1_SM 
+typedef enum {
+    CT_MPEG1,
+    CT_MPEG2,
+    CT_H264,
+    CT_DIVX311,
+    CT_DIVX4,
+    CT_MPEG4_PART2,
+    CT_VC1,
+    CT_VC1_SM,
+    CT_H265,
+    CT_SPARK,
+    CT_VP6,
+    CT_VP8,
+    CT_VP9
 } video_codec_type_t;
+
 
 typedef enum {
 	STREAMTYPE_UNKNOWN = -1,
@@ -38,10 +44,15 @@ typedef enum {
 	STREAMTYPE_MPEG4_Part2 = 4,
 	STREAMTYPE_VC1_SM = 5,
 	STREAMTYPE_MPEG1 = 6,
+	STREAMTYPE_MPEG4_H265 = 7,
+	STREAMTYPE_VB8 = 8,
+	STREAMTYPE_VB9 = 9,
 	STREAMTYPE_XVID = 10,
 	STREAMTYPE_DIVX311 = 13,
 	STREAMTYPE_DIVX4 = 14,
-	STREAMTYPE_DIVX5 = 15
+	STREAMTYPE_DIVX5 = 15,
+	STREAMTYPE_VB6 = 18,
+	STREAMTYPE_SPARK = 21,
 } video_stream_type_t;
 
 
