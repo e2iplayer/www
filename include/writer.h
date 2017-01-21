@@ -71,6 +71,10 @@ extern Writer_t WriterVideoMSCOMP;
 extern Writer_t WriterVideoH263;
 extern Writer_t WriterVideoFLV;
 extern Writer_t WriterVideoVC1;
+extern Writer_t WriterVideoVP6;
+extern Writer_t WriterVideoVP8;
+extern Writer_t WriterVideoVP9;
+extern Writer_t WriterVideoSPARK;
 extern Writer_t WriterFramebuffer;
 extern Writer_t WriterPipe;
 
