@@ -1764,9 +1764,11 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                     track.have_aacheader = -1;
                     
                     AVRational rateRational = get_frame_rate(stream);
+                    if (rateRational.den!=0)
+                    {
+                        track.frame_rate = (uint32_t)(1000 * (int64_t)(rateRational.num) / (int64_t)(rateRational.den));
+                    }
                     
-                    track.frame_rate = (uint32_t)(1000 * (int64_t)(rateRational.num) / (int64_t)(rateRational.den));
-
                     /* fixme: revise this */
                     if (track.frame_rate < 23970)
                     {

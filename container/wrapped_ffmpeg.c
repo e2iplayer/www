@@ -71,11 +71,12 @@ static AVCodecContext *get_codecpar(AVStream *stream)
 
 static AVRational get_frame_rate(AVStream *stream)
 {
-#if LIBAVUTIL_VERSION_MAJOR < 54
-    return stream->r_frame_rate;
-#else
-    return stream->avg_frame_rate;
-#endif
+    AVRational rateRational = stream->avg_frame_rate;
+    if (0 == rateRational.den)
+    {
+        rateRational = stream->r_frame_rate; 
+    }
+    return rateRational;
 }
 
 #if LIBAVFORMAT_VERSION_MAJOR > 56
