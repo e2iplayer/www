@@ -21,11 +21,7 @@ static void set_packet(AVPacket **pkt_dest, AVPacket *pkt_src)
         return;
     if (*pkt_dest != NULL)
     {
-#if LIBAVCODEC_VERSION_MAJOR >= 56
-        av_packet_unref(*pkt_dest);
-#else
-        av_free_packet(*pkt_dest);
-#endif
+        wrapped_packet_unref(*pkt_dest);
         av_free(*pkt_dest);
     }
     *pkt_dest = av_malloc(sizeof(AVPacket));
@@ -50,11 +46,7 @@ static int filter_packet(AVBitStreamFilterContext *bsf_ctx, AVCodecContext *enc_
     {
         pkt->side_data = NULL;
         pkt->side_data_elems = 0;
-#if LIBAVCODEC_VERSION_MAJOR >= 56
-        av_packet_unref(pkt);
-#else
-        av_free_packet(pkt);
-#endif
+        wrapped_packet_unref(pkt);
         new_pkt.buf = av_buffer_create(new_pkt.data, new_pkt.size,
                 av_buffer_default_free, NULL, 0);
         if (!new_pkt.buf)
@@ -80,22 +72,14 @@ static void mpeg4p2_context_reset(Mpeg4P2Context *context)
     {
         if (context->b_frames[i] != NULL)
         {
-#if LIBAVCODEC_VERSION_MAJOR >= 56
-            av_packet_unref(context->b_frames[i]);
-#else
-            av_free_packet(context->b_frames[i]);
-#endif
+            wrapped_packet_unref(context->b_frames[i]);
             av_free(context->b_frames[i]);
         }
         context->b_frames[i] = NULL;
     }
     if (context->second_ip_frame != NULL)
     {
-#if LIBAVCODEC_VERSION_MAJOR >= 56
-        av_packet_unref(context->second_ip_frame);
-#else
-        av_free_packet(context->second_ip_frame);
-#endif
+        wrapped_packet_unref(context->second_ip_frame);
         av_free(context->second_ip_frame);
     }
     context->second_ip_frame = NULL;

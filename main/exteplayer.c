@@ -49,7 +49,7 @@ extern void rtmp_proto_impl_set(const int32_t val);
 extern void pcm_resampling_set(int32_t val);
 extern void stereo_software_decoder_set(int32_t val);
 extern void insert_pcm_as_lpcm_set(int32_t val);
-extern void progressive_download_set(int32_t val);
+extern void progressive_playback_set(int32_t val);
 
 extern OutputHandler_t         OutputHandler;
 extern PlaybackHandler_t       PlaybackHandler;
@@ -316,7 +316,7 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
             break;
         case 'o':
             printf("Set progressive download to %d\n", atoi(optarg));
-            progressive_download_set(atoi(optarg));
+            progressive_playback_set(atoi(optarg));
             break;
         case 'p':
             SetNice(atoi(optarg));
@@ -567,7 +567,7 @@ int main(int argc, char* argv[])
                 int flags = 0;
                 if( 1 == sscanf(argvBuff+1, "%d", &flags) )
                 {
-                    progressive_download_set(flags);
+                    progressive_playback_set(flags);
                     fprintf(stderr, "{\"PROGRESSIVE_DOWNLOAD\":{\"flags\":%d, \"sts\":0}}\n", flags);
                 }
                 break;

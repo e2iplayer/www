@@ -106,7 +106,7 @@ static void update_finish_timeout()
         /* On some STBs PTS readed from decoder is invalid after seek or at start 
          * this is the reason for additional validation when we what to close immediately
          */
-        if( !progressive_download && 0 == ret && currPts >= maxInjectedPts && 
+        if( !progressive_playback && 0 == ret && currPts >= maxInjectedPts && 
             ((currPts - maxInjectedPts) / 90000) < 2 )
         {
             /* close immediately 
@@ -159,7 +159,7 @@ static int32_t ffmpeg_read_wrapper_base(void *opaque, uint8_t *buf, int32_t buf_
 
 static int32_t ffmpeg_read_wrapper(void *opaque, uint8_t *buf, int32_t buf_size)
 {
-    if(progressive_download)
+    if(progressive_playback)
     {
         return ffmpeg_read_wrapper_base(opaque, buf, buf_size, 0);
     }

@@ -52,6 +52,8 @@ typedef struct Track_s {
 
     /* stream from ffmpeg */
     void               *  stream;
+    /* AVCodecContext  for steam */
+    void               *  avCodecCtx;
     /* codec extra data (header or some other stuff) */
     void               *  extraData;
     int		              extraSize;
