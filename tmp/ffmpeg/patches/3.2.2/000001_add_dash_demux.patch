@@ -1,6 +1,6 @@
 diff -uNr ffmpeg-3.2.2/configure ffmpeg-3.2.2_dash_demux/configure
 --- ffmpeg-3.2.2/configure	2016-12-06 00:28:58.000000000 +0100
-+++ ffmpeg-3.2.2_dash_demux/configure	2017-01-27 22:36:06.832950432 +0100
++++ ffmpeg-3.2.2_dash_demux/configure	2017-01-31 23:46:22.850211062 +0100
 @@ -294,6 +294,7 @@
                             on OSX if openssl and gnutls are not used [autodetect]
    --enable-x11grab         enable X11 grabbing (legacy) [no]
@@ -35,7 +35,7 @@ diff -uNr ffmpeg-3.2.2/configure ffmpeg-3.2.2_dash_demux/configure
  disabled crystalhd || check_lib libcrystalhd/libcrystalhd_if.h DtsCrystalHDVersion -lcrystalhd || disable crystalhd
 diff -uNr ffmpeg-3.2.2/libavformat/allformats.c ffmpeg-3.2.2_dash_demux/libavformat/allformats.c
 --- ffmpeg-3.2.2/libavformat/allformats.c	2016-12-06 00:28:54.000000000 +0100
-+++ ffmpeg-3.2.2_dash_demux/libavformat/allformats.c	2017-01-27 15:28:06.000000000 +0100
++++ ffmpeg-3.2.2_dash_demux/libavformat/allformats.c	2017-01-31 23:46:22.850211062 +0100
 @@ -100,7 +100,7 @@
      REGISTER_DEMUXER (CINE,             cine);
      REGISTER_DEMUXER (CONCAT,           concat);
@@ -47,8 +47,8 @@ diff -uNr ffmpeg-3.2.2/libavformat/allformats.c ffmpeg-3.2.2_dash_demux/libavfor
      REGISTER_DEMUXER (DCSTR,            dcstr);
 diff -uNr ffmpeg-3.2.2/libavformat/dashdec.c ffmpeg-3.2.2_dash_demux/libavformat/dashdec.c
 --- ffmpeg-3.2.2/libavformat/dashdec.c	1970-01-01 01:00:00.000000000 +0100
-+++ ffmpeg-3.2.2_dash_demux/libavformat/dashdec.c	2017-01-27 21:51:08.685113200 +0100
-@@ -0,0 +1,1798 @@
++++ ffmpeg-3.2.2_dash_demux/libavformat/dashdec.c	2017-01-31 23:49:16.481109867 +0100
+@@ -0,0 +1,1803 @@
 +/*
 + * Dynamic Adaptive Streaming over HTTP demux
 + * Copyright (c) 2017 samsamsam@o2.pl based on HLS demux
@@ -1815,6 +1815,11 @@ diff -uNr ffmpeg-3.2.2/libavformat/dashdec.c ffmpeg-3.2.2_dash_demux/libavformat
 +        strstr(p->buf, "dash:profile:isoff-main:2011")) {
 +        return AVPROBE_SCORE_MAX;
 +    }
++    
++    if (strstr(p->buf, "dash:profile")) {
++        return AVPROBE_SCORE_MAX / 2;
++    }
++    
 +    return 0;
 +}
 +
@@ -1849,7 +1854,7 @@ diff -uNr ffmpeg-3.2.2/libavformat/dashdec.c ffmpeg-3.2.2_dash_demux/libavformat
 +};
 diff -uNr ffmpeg-3.2.2/libavformat/Makefile ffmpeg-3.2.2_dash_demux/libavformat/Makefile
 --- ffmpeg-3.2.2/libavformat/Makefile	2016-12-06 00:28:54.000000000 +0100
-+++ ffmpeg-3.2.2_dash_demux/libavformat/Makefile	2017-01-27 15:11:39.000000000 +0100
++++ ffmpeg-3.2.2_dash_demux/libavformat/Makefile	2017-01-31 23:46:22.854211062 +0100
 @@ -134,6 +134,7 @@
  OBJS-$(CONFIG_DATA_DEMUXER)              += rawdec.o
  OBJS-$(CONFIG_DATA_MUXER)                += rawdec.o
