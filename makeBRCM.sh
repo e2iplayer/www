@@ -113,7 +113,7 @@ SOURCE_FILES+=" output/writer/mipsel/mpeg4.c"
 SOURCE_FILES+=" output/writer/mipsel/divx3.c"
 SOURCE_FILES+=" output/writer/mipsel/vc1.c"
 SOURCE_FILES+=" output/writer/mipsel/vp.c"
-#SOURCE_FILES+=" output/writer/mipsel/wmv.c" 
+SOURCE_FILES+=" output/writer/mipsel/wmv.c"
 SOURCE_FILES+=" playback/playback.c"
 
 CURR_PATH=$PWD
