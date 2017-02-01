@@ -7,10 +7,16 @@ LIC_FILES_CHKSUM = "file://${COMMON_LICENSE_DIR}/GPL-2.0;md5=801f80980d171dd6425
 DEPENDS = "ffmpeg"
 RDEPENDS_${PN} = "ffmpeg"
 
-SRCREV = "82b46830a9ed6c3d74fc82934974f01944c9f850"
+inherit gitpkgv
+
+SRCREV = "${AUTOREV}"
+PV = "30+gitr${SRCPV}"
+PKGV = "30+gitr${GITPKGV}"
+
 SRC_URI = "git://github.com/samsamsam-iptvplayer/exteplayer3.git;branch=master"
 
 S = "${WORKDIR}/git/"
+
 
 SOURCE_FILES = "main/exteplayer.c"
 SOURCE_FILES =+ "container/container.c"
@@ -56,6 +62,7 @@ output/writer/mipsel/mpeg2.c \
 output/writer/mipsel/mpeg4.c \
 output/writer/mipsel/divx3.c \
 output/writer/mipsel/vp.c \
+output/writer/mipsel/wmv.c \
 output/writer/mipsel/vc1.c ", d)}"
 
 do_compile() {
