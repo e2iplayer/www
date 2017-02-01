@@ -55,8 +55,7 @@
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
-#define H264_DEBUG
-
+//#define H264_DEBUG
 #ifdef H264_DEBUG
 
 static short debug_level = 0;
@@ -73,23 +72,11 @@ if (debug_level >= level) printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); 
 #define h264_err(fmt, x...)
 #endif
 
-#define NALU_TYPE_PLAYER2_CONTAINER_PARAMETERS          24
-#define CONTAINER_PARAMETERS_VERSION                    0x00
 #define IOVEC_SIZE                                      128
 
 /* ***************************** */
 /* Types                         */
 /* ***************************** */
-typedef struct avcC_s
-{
-    unsigned char       Version;                /* configurationVersion        */
-    unsigned char       Profile;                /* AVCProfileIndication        */
-    unsigned char       Compatibility;          /* profile_compatibility       */
-    unsigned char       Level;                  /* AVCLevelIndication          */
-    unsigned char       NalLengthMinusOne;      /* held in bottom two bits     */
-    unsigned char       NumParamSets;           /* held in bottom 5 bits       */
-    unsigned char       Params[1];              /* {length,params}{length,params}...sequence then picture*/
-} avcC_t;
 
 /* ***************************** */
 /* Varaibles                     */
@@ -97,7 +84,6 @@ typedef struct avcC_s
 static unsigned char           Head[] = {0, 0, 0, 1};
 static int                     initialHeader = 1;
 static unsigned int            NalLengthBytes = 1;
-static unsigned long long int  PrevVideoPts   = 0;
 static unsigned char           *CodecData     = NULL; 
 static unsigned int            CodecDataLen   = 0;
 static int                     avc3 = 0;
@@ -309,8 +295,7 @@ static int32_t PreparCodecData(unsigned char *data, unsigned int cd_len, unsigne
 }
 
 static int reset()
-{   
-    PrevVideoPts = 0;
+{
     initialHeader = 1;
     avc3 = 0;
     return 0;
