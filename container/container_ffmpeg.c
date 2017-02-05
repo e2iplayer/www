@@ -2045,8 +2045,12 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                         ffmpeg_printf(1, "block_alignment = %d\n", block_alignment);
                         memcpy(track.aacbuf + 90, &block_alignment, 2); //block_alignment
 
-                        uint16_t bits_per_sample =
-                        get_codecpar(stream)->sample_fmt>=0?(get_codecpar(stream)->sample_fmt+1)*8:8;
+#if LIBAVFORMAT_VERSION_MAJOR > 56
+                        enum AVSampleFormat sample_fmt = get_codecpar(stream)->format;
+#else
+                        enum AVSampleFormat sample_fmt = get_codecpar(stream)->sample_fmt;
+#endif
+                        uint16_t bits_per_sample = sample_fmt>=0 ? (sample_fmt+1)*8 : 8;
                         ffmpeg_printf(1, "bits_per_sample = %d (%d)\n", bits_per_sample, get_codecpar(stream)->sample_fmt);
                         memcpy(track.aacbuf + 92, &bits_per_sample, 2); //bits_per_sample
 

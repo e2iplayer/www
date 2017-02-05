@@ -92,95 +92,13 @@ typedef struct avcC_s
 } avcC_t;
 
 
-typedef struct BuffPacket_s
-{
-    unsigned long long int  pts;
-    unsigned char           *data;
-    unsigned int            len;
-    struct BuffPacket_s     *next;
-} BuffPacket_t;
-
-static BuffPacket_t *BuffList = NULL;
-static unsigned int BuffListSize = 0;
-
-static void AddPacket(unsigned long long int videoPts, unsigned char *data, unsigned int len)
-{
-    BuffPacket_t *pPacket = malloc(sizeof(BuffPacket_t));
-    pPacket->pts  = videoPts;
-    pPacket->data = malloc(len);
-    pPacket->len  = len;
-    pPacket->next = NULL;
-    
-    memcpy(pPacket->data, data, len);
-    
-    if (NULL == BuffList)
-    {
-        BuffList = pPacket;
-    }
-    else if (pPacket->pts < BuffList->pts)
-    {
-        pPacket->next = BuffList;
-        BuffList = pPacket;
-    }
-    else
-    {
-        BuffPacket_t *pPrevItem = NULL;
-        BuffPacket_t *pCurrItem = BuffList;
-        while(pCurrItem->pts < pPacket->pts && NULL != pCurrItem->next)
-        {
-            pPrevItem = pCurrItem;
-            pCurrItem = pCurrItem->next;
-        }
-        
-        if (pCurrItem->pts < pPacket->pts)
-        {
-            pPacket->next = pCurrItem->next;
-            pCurrItem->next = pPacket;
-        }
-        else
-        {
-            pPrevItem->next = pPacket;
-            pPacket->next = pCurrItem;
-        }
-    }
-    
-    ++BuffListSize;
-}
-
-static BuffPacket_t * GetPacket()
-{
-    if (BuffListSize <= 0)
-    {
-        return NULL;
-    }
-    
-    BuffPacket_t *pPacket = BuffList;
-    BuffList = pPacket->next;
-    --BuffListSize;
-    
-    return pPacket;
-}
-
-static void FreePacket(BuffPacket_t *pPacket)
-{
-    if (NULL != pPacket)
-    {
-        if(NULL == pPacket->data)
-        {
-            free(pPacket->data);
-        }
-        free(pPacket);
-    }
-}
-
-
 /* ***************************** */
 /* Varaibles                     */
 /* ***************************** */
 const  uint8_t   Head[] = {0, 0, 0, 1};
 static int32_t   initialHeader = 1;
 static uint32_t  NalLengthBytes = 1;
-static uint64_t  PrevVideoPts   = 0;
+static int       avc3 = 0;
 /* ***************************** */
 /* Prototypes                    */
 /* ***************************** */
@@ -188,11 +106,112 @@ static uint64_t  PrevVideoPts   = 0;
 /* ***************************** */
 /* MISC Functions                */
 /* ***************************** */
+// Please see: https://bugzilla.mozilla.org/show_bug.cgi?id=1105771
+static int32_t UpdateExtraData(uint8_t **ppExtraData, uint32_t *pExtraDataSize, uint8_t *pData, uint32_t dataSize)
+{
+    uint8_t *aExtraData = *ppExtraData;
+    
+    if (aExtraData[0] != 1 || !pData) {
+        // Not AVCC or nothing to update with.
+        return -1;
+    }
+    
+    int32_t nalsize = (aExtraData[4] & 3) + 1;
+    
+    uint8_t sps[256];
+    uint8_t spsIdx = 0;
+    
+    uint8_t numSps = 0;
+    
+    uint8_t pps[256];
+    uint8_t ppsIdx = 0;
+    
+    uint8_t numPps = 0;
+
+    if(nalsize != 4)
+    {
+        return -1;
+    }
+    
+    // Find SPS and PPS NALUs in AVCC data
+    uint8_t *d = pData;
+    while (d + 4 < pData + dataSize)
+    {
+        uint32_t nalLen = ReadUint32(d);
+        
+        uint8_t nalType = d[4] & 0x1f;
+        if (nalType == 7) 
+        { /* SPS */
+        
+            // 16 bits size
+            sps[spsIdx++] = (uint8_t)(0xFF & (nalLen >> 8));
+            sps[spsIdx++] = (uint8_t)(0xFF & nalLen);
+            
+            if (spsIdx + nalLen >= sizeof(sps))
+            {
+                h264_err("SPS no free space to copy...\n");
+                return -1;
+            }
+            memcpy(&(sps[spsIdx]), d + 4, nalLen);
+            spsIdx += nalLen;
+            
+            numSps += 1;
+            
+            h264_printf(10, "SPS len[%u]...\n", nalLen);
+        } 
+        else if (nalType == 8)
+        { /* PPS */
+
+            // 16 bits size
+            pps[ppsIdx++] = (uint8_t)(0xFF & (nalLen >> 8));
+            pps[ppsIdx++] = (uint8_t)(0xFF & nalLen);
+            
+            if (ppsIdx + nalLen >= sizeof(sps))
+            {
+                h264_err("PPS not free space to copy...\n");
+                return -1;
+            }
+            memcpy(&(pps[ppsIdx]), d + 4, nalLen);
+            ppsIdx += nalLen;
+            
+            numPps += 1;
+            
+            h264_printf(10, "PPS len[%u]...\n", nalLen);
+        }
+        d += 4 + nalLen;
+    }
+    uint32_t idx = 0;
+    *ppExtraData = malloc(7 + spsIdx + ppsIdx);
+    aExtraData = *ppExtraData;
+    aExtraData[idx++] = 0x1;            // version
+    aExtraData[idx++] = sps[3];         // profile
+    aExtraData[idx++] = sps[4];         // profile compat
+    aExtraData[idx++] = sps[5];         // level
+    aExtraData[idx++] = 0xff;           // nal size - 1
+    
+    aExtraData[idx++] = 0xe0 | numSps;
+    if (numSps)
+    {
+        memcpy(&(aExtraData[idx]), sps, spsIdx);
+        idx += spsIdx;
+    }
+    
+    aExtraData[idx++] = numPps;
+    if (numPps)
+    {
+        memcpy(&(aExtraData[idx]), pps, ppsIdx);
+        idx += ppsIdx;
+    }
+    
+    h264_printf(10, "aExtraData len[%u]...\n", idx);
+    *pExtraDataSize = idx;
+    return 0;
+}
 
 static int32_t reset()
 {   
-    PrevVideoPts = 0;
     initialHeader = 1;
+    avc3 = 0;
     return 0;
 }
 
@@ -234,9 +253,9 @@ static int32_t writeData(void* _call)
     }
 
     /* AnnexA */
-    if( (1 < call->private_size && 0 == call->private_data[0]) || 
+    if( !avc3 && ((1 < call->private_size && 0 == call->private_data[0]) || 
         (call->len > 3) && ((call->data[0] == 0x00 && call->data[1] == 0x00 && call->data[2] == 0x00 && call->data[3] == 0x01) ||
-        (call->data[0] == 0xff && call->data[1] == 0xff && call->data[2] == 0xff && call->data[3] == 0xff)))
+        (call->data[0] == 0xff && call->data[1] == 0xff && call->data[2] == 0xff && call->data[3] == 0xff))))
     {
         uint32_t PacketLength = 0;
         uint32_t FakeStartCode = /*(call->Version << 8) | */PES_VERSION_FAKE_START_CODE;
@@ -265,9 +284,7 @@ static int32_t writeData(void* _call)
         iov[ic++].iov_len = 1;
         
         iov[0].iov_len = InsertPesHeader(PesHeader, -1, MPEG_VIDEO_PES_START_CODE, VideoPts, FakeStartCode);
-        //printf("Packet length[%d]\n", PacketLength);
         int ret = writev(call->fd, iov, ic);
-        //FreePacket(pPacket);
         return ret;
     }
     else if( !call->private_data || call->private_size < 7 || 1 != call->private_data[0])
@@ -278,7 +295,9 @@ static int32_t writeData(void* _call)
 
     if (initialHeader)
     {
-        avcC_t*         avcCHeader          = (avcC_t*)call->private_data;
+        uint8_t  *private_data = call->private_data;
+        uint32_t  private_size = call->private_size;
+        avcC_t*         avcCHeader          = (avcC_t*)private_data;
         unsigned int    i;
         unsigned int    ParamSets;
         unsigned int    ParamOffset;
@@ -288,6 +307,17 @@ static int32_t writeData(void* _call)
         ParametersLength                      = 0;
 
         unsigned char  HeaderData[19];
+        
+        if (private_size <= sizeof(avcC_t))
+        {
+            UpdateExtraData(&private_data, &private_size, call->data, call->len);
+            if (private_data != call->private_data)
+            {
+                avc3 = 1;
+                avcCHeader          = (avcC_t*)private_data;
+            }
+        }
+        
         HeaderData[ParametersLength++]        = 0x00;                                         // Start code
         HeaderData[ParametersLength++]        = 0x00;
         HeaderData[ParametersLength++]        = 0x01;
@@ -378,6 +408,12 @@ static int32_t writeData(void* _call)
 
         iov[0].iov_len = InsertPesHeader (PesHeader, InitialHeaderLength, MPEG_VIDEO_PES_START_CODE, INVALID_PTS_VALUE, 0);
         ssize_t l = writev(call->fd, iov, ic);
+        
+        if (private_data != call->private_data)
+        {
+            free(private_data);
+        }
+            
         if (l < 0)
         {
             return l;
