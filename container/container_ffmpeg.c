@@ -822,7 +822,7 @@ static void FFMPEGThread(Context_t *context)
                             decoded_frame = NULL;
                         }
                     }
-#if LIBAVFORMAT_VERSION_MAJOR > 56
+#if (LIBAVFORMAT_VERSION_MAJOR > 57) || ((LIBAVFORMAT_VERSION_MAJOR == 57) && (LIBAVFORMAT_VERSION_MINOR > 32))
                     while (packet.size > 0 || (!packet.size && !packet.data)) 
 #else
                     while(packet.size > 0)
@@ -846,7 +846,7 @@ static void FFMPEGThread(Context_t *context)
                         {
                             wrapped_frame_unref(decoded_frame);
                         }
-#if LIBAVFORMAT_VERSION_MAJOR > 56
+#if (LIBAVFORMAT_VERSION_MAJOR > 57) || ((LIBAVFORMAT_VERSION_MAJOR == 57) && (LIBAVFORMAT_VERSION_MINOR > 32))
                         int ret = avcodec_send_packet(c, &packet);
                         if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) 
                         {
@@ -2045,7 +2045,7 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                         ffmpeg_printf(1, "block_alignment = %d\n", block_alignment);
                         memcpy(track.aacbuf + 90, &block_alignment, 2); //block_alignment
 
-#if LIBAVFORMAT_VERSION_MAJOR > 56
+#if (LIBAVFORMAT_VERSION_MAJOR > 57) || ((LIBAVFORMAT_VERSION_MAJOR == 57) && (LIBAVFORMAT_VERSION_MINOR > 32))
                         enum AVSampleFormat sample_fmt = get_codecpar(stream)->format;
 #else
                         enum AVSampleFormat sample_fmt = get_codecpar(stream)->sample_fmt;

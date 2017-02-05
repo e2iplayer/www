@@ -41,7 +41,7 @@ static void wrapped_packet_unref(void *param)
 
 static void wrapped_set_max_analyze_duration(void *param, int val)
 {
-#if (LIBAVFORMAT_VERSION_MAJOR > 55) && (LIBAVFORMAT_VERSION_MAJOR < 57)
+#if (LIBAVFORMAT_VERSION_MAJOR > 55) && (LIBAVFORMAT_VERSION_MAJOR < 56)
     ((AVFormatContext *)param)->max_analyze_duration2 = val;
 #else
     ((AVFormatContext *)param)->max_analyze_duration = 1;
@@ -57,7 +57,7 @@ static int64_t get_packet_duration(AVPacket *packet)
 #endif
 }
 
-#if LIBAVFORMAT_VERSION_MAJOR > 56
+#if (LIBAVFORMAT_VERSION_MAJOR > 57) || ((LIBAVFORMAT_VERSION_MAJOR == 57) && (LIBAVFORMAT_VERSION_MINOR > 32))
 static AVCodecParameters *get_codecpar(AVStream *stream)
 {
     return stream->codecpar;
@@ -79,7 +79,7 @@ static AVRational get_frame_rate(AVStream *stream)
     return rateRational;
 }
 
-#if LIBAVFORMAT_VERSION_MAJOR > 56
+#if (LIBAVFORMAT_VERSION_MAJOR > 57) || ((LIBAVFORMAT_VERSION_MAJOR == 57) && (LIBAVFORMAT_VERSION_MINOR > 32))
 typedef struct CodecCtxStoreItem_s {
     uint32_t cAVIdx;
     int id;
@@ -135,7 +135,7 @@ void free_all_stored_avcodec_context()
 
 static AVCodecContext *wrapped_avcodec_get_context(uint32_t cAVIdx, AVStream *stream)
 {
-#if LIBAVFORMAT_VERSION_MAJOR > 56
+#if (LIBAVFORMAT_VERSION_MAJOR > 57) || ((LIBAVFORMAT_VERSION_MAJOR == 57) && (LIBAVFORMAT_VERSION_MINOR > 32))
     AVCodecContext *avCodecCtx = restore_avcodec_context(cAVIdx, stream->id);
     if (!avCodecCtx)
     {
@@ -165,7 +165,7 @@ static AVCodecContext *wrapped_avcodec_get_context(uint32_t cAVIdx, AVStream *st
 
 static void wrapped_avcodec_flush_buffers(uint32_t cAVIdx)
 {
-#if LIBAVFORMAT_VERSION_MAJOR > 56
+#if (LIBAVFORMAT_VERSION_MAJOR > 57) || ((LIBAVFORMAT_VERSION_MAJOR == 57) && (LIBAVFORMAT_VERSION_MINOR > 32))
     CodecCtxStoreItem_t *ptr = g_codecCtxStoreListHead;
     while (ptr != NULL)
     {
