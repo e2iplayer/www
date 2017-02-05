@@ -127,7 +127,10 @@ int store_avcodec_context(AVCodecContext *avCodecCtx, uint32_t cAVIdx, int id)
     
     return 0;
 }
-
+#else 
+void free_all_stored_avcodec_context()
+{
+}
 #endif
 
 static AVCodecContext *wrapped_avcodec_get_context(uint32_t cAVIdx, AVStream *stream)
