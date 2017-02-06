@@ -274,7 +274,7 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
     int digit_optind = 0;
     int aopt = 0, bopt = 0;
     char *copt = 0, *dopt = 0;
-    while ( (c = getopt(argc, argv, "wae3dlsrimvn:x:u:c:h:o:p:t:9:0:1:")) != -1) 
+    while ( (c = getopt(argc, argv, "wae3dlsrimvn:x:u:c:h:o:p:t:9:0:1:f:")) != -1) 
     {
         switch (c) 
         {
@@ -359,6 +359,19 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
         case '1':
             ffmpeg_av_dict_set("audio_rep_index", optarg, 0);
             break;
+        case 'f':
+        {
+            char *ffopt = strdup(optarg);
+            char *ffval = strchr(ffopt, '=');
+            if (ffval)
+            {
+                *ffval = '\0';
+                ffval += 1;
+                ffmpeg_av_dict_set(ffopt, ffval, 0);
+            }
+            free(ffopt);
+            break;
+        }
         default:
             printf ("?? getopt returned character code 0%o ??\n", c);
             ret = -1;
@@ -426,6 +439,7 @@ int main(int argc, char* argv[])
         printf("[-x separateAudioUri]\n");
         printf("[-0 idx] video MPEG-DASH representation index\n");
         printf("[-1 idx] audio MPEG-DASH representation index\n");
+        printf("[-f ffopt=ffval] any other ffmpeg option\n");
         
         exit(1);
     }

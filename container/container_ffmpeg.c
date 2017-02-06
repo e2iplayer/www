@@ -290,8 +290,10 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, int32_t *versi
         return "V_VP6";
     case AV_CODEC_ID_VP8:
         return "V_VP8";
+#if LIBAVCODEC_VERSION_MAJOR > 54
     case AV_CODEC_ID_VP9:
         return "V_VP9";
+#endif
     case AV_CODEC_ID_RV10:
     case AV_CODEC_ID_RV20:
         return "V_RMV";
@@ -1459,8 +1461,6 @@ int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int
                 }
                 free(swfUrl);
                 free(swfVfy);
-
-                pavio_opts = &avio_opts;
             }
             
             if (2 == haveNativeProto)
@@ -1489,8 +1489,9 @@ int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int
             av_dict_set(&avio_opts, "reconnect_at_eof", "1", 0);
             av_dict_set(&avio_opts, "reconnect_streamed", "1", 0);
         }
-        pavio_opts = &avio_opts;
     }
+    
+    pavio_opts = &avio_opts;
     
     if ((err = avformat_open_input(&avContextTab[AVIdx], filename, fmt, pavio_opts)) != 0)
     {
@@ -2777,7 +2778,7 @@ static int32_t Command(void  *_context, ContainerCmd_t command, void *argument)
     return ret;
 }
 
-static char *FFMPEG_Capabilities[] = {"avi", "mkv", "mp4", "ts", "mov", "flv", "flac", "mp3", "mpg", "m2ts", "vob", "evo", "wmv","wma", "asf", "mp2", "m4v", "m4a", "fla", "divx", "dat", "mpeg", "trp", "mts", "vdr", "ogg", "wav", "wtv", "asx", "mvi", "png", "jpg", "ra", "ram", "rm", "3gp", "amr", "webm", "m3u8", NULL };
+static char *FFMPEG_Capabilities[] = {"avi", "mkv", "mp4", "ts", "mov", "flv", "flac", "mp3", "mpg", "m2ts", "vob", "evo", "wmv","wma", "asf", "mp2", "m4v", "m4a", "fla", "divx", "dat", "mpeg", "trp", "mts", "vdr", "ogg", "wav", "wtv", "asx", "mvi", "png", "jpg", "ra", "ram", "rm", "3gp", "amr", "webm", "m3u8", "mpd", NULL };
 
 Container_t FFMPEGContainer = {
     "FFMPEG",
