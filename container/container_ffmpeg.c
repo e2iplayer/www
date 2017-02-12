@@ -57,6 +57,12 @@
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
+#if (LIBAVFORMAT_VERSION_MAJOR > 57) 
+#define TS_BYTES_SEEKING 0
+#else
+#define TS_BYTES_SEEKING 1
+#fi
+
 /* Some STB with old kernels have problem with default 
  * read/write functions in ffmpeg which use open/read
  * due to this we set own which use fopen/fread from
@@ -71,8 +77,6 @@
 #else
 #define FFMPEG_SILENT
 #endif
-
-//#define FFMPEG_DEBUG
 
 #ifdef FFMPEG_DEBUG
 
@@ -562,7 +566,13 @@ static void FFMPEGThread(Context_t *context)
                 {
                     if(NULL != avContextTab[i])
                     {
-                        av_seek_frame(avContextTab[i], -1, seek_target_seconds, 0);
+                        if (avContextTab[i]->start_time != AV_NOPTS_VALUE)
+                        {
+                            seek_target_seconds += avContextTab[i]->start_time;
+                            printf("SEEK SECONDS [%lld]\n", seek_target_seconds);
+                        }
+                        //av_seek_frame(avContextTab[i], -1, seek_target_seconds, 0);
+                        avformat_seek_file(avContextTab[i], -1, INT64_MIN, seek_target_seconds, INT64_MAX, 0);
                     }
                     else
                     {
@@ -1119,12 +1129,14 @@ static void FFMPEGThread(Context_t *context)
                     int64_t tmpLength = 0;
                     if( 0 == container_ffmpeg_get_length(context, &tmpLength) && tmpLength > 0 && get_play_pts() > 0)
                     {
+#if defined(TS_BYTES_SEEKING) && TS_BYTES_SEEKING
                         if (avContextTab[0]->iformat->flags & AVFMT_TS_DISCONT)
                         {
                             seek_target_bytes = 0;
                             do_seek_target_bytes = 1;
                         }
                         else
+#endif
                         {
                             seek_target_seconds = 0;
                             do_seek_target_seconds = 1;
@@ -2377,7 +2389,7 @@ static int32_t container_ffmpeg_seek_rel(Context_t *context, off_t pos, int64_t 
     }
 
     ffmpeg_printf(10, "iformat->flags %d\n", avContextTab[0]->iformat->flags);
-
+#if defined(TS_BYTES_SEEKING) && TS_BYTES_SEEKING
     if (avContextTab[0]->iformat->flags & AVFMT_TS_DISCONT)
     {
         if (avContextTab[0]->bit_rate)
@@ -2407,6 +2419,7 @@ static int32_t container_ffmpeg_seek_rel(Context_t *context, off_t pos, int64_t 
         return pos;
     }
     else
+#endif
     {
         sec += pts / 90000;
 
@@ -2490,7 +2503,7 @@ static int32_t container_ffmpeg_seek(Context_t *context, int64_t sec, uint8_t ab
     }
 
     ffmpeg_printf(10, "iformat->flags %d\n", avContextTab[0]->iformat->flags);
-
+#if defined(TS_BYTES_SEEKING) && TS_BYTES_SEEKING
     if (avContextTab[0]->iformat->flags & AVFMT_TS_DISCONT)
     {
         /* konfetti: for ts streams seeking frame per seconds does not work (why?).
@@ -2528,6 +2541,7 @@ static int32_t container_ffmpeg_seek(Context_t *context, int64_t sec, uint8_t ab
 
     } 
     else
+#endif
     {
         seek_target_seconds = sec * AV_TIME_BASE;
         do_seek_target_seconds = 1;
