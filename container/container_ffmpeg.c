@@ -61,7 +61,7 @@
 #define TS_BYTES_SEEKING 0
 #else
 #define TS_BYTES_SEEKING 1
-#fi
+#endif
 
 /* Some STB with old kernels have problem with default 
  * read/write functions in ffmpeg which use open/read
