@@ -75,6 +75,7 @@ static Writer_t * AvailableWriter[] = {
     &WriterAudioWMAPRO,
     
     &WriterVideoH264,
+    &WriterVideoH265,
     &WriterVideoH263,
     &WriterVideoMPEG4,
     &WriterVideoMPEG2,

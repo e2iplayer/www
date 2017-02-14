@@ -326,6 +326,11 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, int32_t *versi
     case AV_CODEC_ID_FFH264:
 #endif
         return "V_MPEG4/ISO/AVC";
+#if LIBAVCODEC_VERSION_MAJOR > 54
+    case AV_CODEC_ID_HEVC:
+    // case AV_CODEC_ID_H265:
+        return "V_HEVC";
+#endif
     case AV_CODEC_ID_AVS:
         return "V_AVS";
     case AV_CODEC_ID_MP2:
@@ -734,6 +739,11 @@ static void FFMPEGThread(Context_t *context)
                     avOut.width      = videoTrack->width;
                     avOut.height     = videoTrack->height;
                     avOut.type       = "video";
+                    
+                    if (avContextTab[cAVIdx]->iformat->flags & AVFMT_TS_DISCONT)
+                    {
+                        avOut.infoFlags = 1; // TS container
+                    }
 
                     if (context->output->video->Write(context, &avOut) < 0)
                     {

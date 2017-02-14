@@ -45,6 +45,8 @@ typedef struct
     uint32_t         width;
     uint32_t         height;
     
+    uint32_t         infoFlags;
+    
     char            *type;
 } AudioVideoOut_t;
 

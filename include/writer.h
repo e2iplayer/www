@@ -20,6 +20,7 @@ typedef struct {
     unsigned int           Width;
     unsigned int           Height;
     unsigned char          Version;
+    unsigned int           InfoFlags;
 } WriterAVCallData_t;
 
 
@@ -69,6 +70,7 @@ extern Writer_t WriterVideoDIVX;
 extern Writer_t WriterVideoFOURCC;
 extern Writer_t WriterVideoMSCOMP;
 extern Writer_t WriterVideoH263;
+extern Writer_t WriterVideoH265;
 extern Writer_t WriterVideoFLV;
 extern Writer_t WriterVideoVC1;
 extern Writer_t WriterVideoVP6;
