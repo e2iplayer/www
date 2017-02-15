@@ -26,7 +26,7 @@
 #define TIMEOUT_MAX_ITERS 10
 
 static int ffmpeg_buf_size = FILLBUFSIZE + FILLBUFDIFF;
-static ffmpeg_buf_seek_time = FILLBUFSEEKTIME;
+static int ffmpeg_buf_seek_time = FILLBUFSEEKTIME;
 static int(*ffmpeg_read_org)(void *opaque, uint8_t *buf, int buf_size) = NULL;
 static int(*ffmpeg_real_read_org)(void *opaque, uint8_t *buf, int buf_size) = NULL;
 

@@ -32,6 +32,7 @@ typedef struct BitPacker_s
 
 void PutBits(BitPacker_t * ld, uint32_t code, uint32_t length);
 void FlushBits(BitPacker_t * ld);
+int8_t PlaybackDieNow(int8_t val); 
 
 /* ***************************** */
 /* MISC Functions                */
