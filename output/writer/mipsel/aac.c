@@ -283,7 +283,7 @@ static WriterCaps_t caps_aache = {
     eAudio,
     "A_AAC_HE",
     AUDIO_ENCODING_AAC,
-    AUDIOTYPE_AAC_PLUS,
+    AUDIOTYPE_AAC_HE,
     -1
 };
 

@@ -273,7 +273,7 @@ static void releaseMutex(const char *filename __attribute__((unused)), const con
     ffmpeg_printf(100, "::%d released mutex\n", line);
 }
 
-static char* Codec2Encoding(int32_t codec_id, int32_t media_type, int32_t *version)
+static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extradata, int extradata_size, int32_t *version)
 {
     ffmpeg_printf(10, "Codec ID: %d (%.8lx)\n", codec_id, codec_id);
     switch (codec_id)
@@ -338,6 +338,18 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, int32_t *versi
     case AV_CODEC_ID_MP3:
         return (mp3_software_decode) ? "A_IPCM" : "A_MP3";
     case AV_CODEC_ID_AAC:
+        if (extradata_size >= 2)
+        {
+            int8_t object_type = extradata[0] >> 3;
+            // AAC stream must be injected to audio decoder with ADTS header
+            // to store value (object_type - 1) we have only 2 bits
+            // so we are not able to write value greater than 4
+            // due to this we have no audio with HE-AAC v2 Profile
+            if (object_type > 4)
+            {
+                return "A_IPCM";
+            }
+        }
         return (aac_software_decode) ? "A_IPCM" : "A_AAC";
     case AV_CODEC_ID_AC3:
         return  (ac3_software_decode) ? "A_IPCM" : "A_AC3";
@@ -1730,7 +1742,9 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
             AVStream *stream = avContext->streams[n];
             int32_t version = 0;
 
-            char *encoding = Codec2Encoding((int32_t)get_codecpar(stream)->codec_id, (int32_t)get_codecpar(stream)->codec_type , &version);
+            char *encoding = Codec2Encoding((int32_t)get_codecpar(stream)->codec_id, (int32_t)get_codecpar(stream)->codec_type, \
+                                            (uint8_t *)get_codecpar(stream)->extradata, \
+                                            (int)get_codecpar(stream)->extradata_size, &version);
             
             if(encoding != NULL && !strncmp(encoding, "A_IPCM", 6) && insert_pcm_as_lpcm)
             {
@@ -1803,8 +1817,6 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                     }
                     
                     ffmpeg_printf(10, "bit_rate       [%d]\n", get_codecpar(stream)->bit_rate);
-                    ffmpeg_printf(10, "flags          [%d]\n", get_codecpar(stream)->flags);
-                    ffmpeg_printf(10, "frame_bits     [%d]\n", get_codecpar(stream)->frame_bits);
                     ffmpeg_printf(10, "time_base.den  [%d]\n", stream->time_base.den);
                     ffmpeg_printf(10, "time_base.num  [%d]\n", stream->time_base.num);
                     ffmpeg_printf(10, "width          [%d]\n", get_codecpar(stream)->width);
@@ -1935,7 +1947,10 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
 
                             int32_t object_type = 2; // LC
                             int32_t sample_index = aac_get_sample_rate_index(get_codecpar(stream)->sample_rate);
-                            int32_t chan_config = get_codecpar(stream)->channels;
+                            int32_t chan_config = get_codecpar(stream)->channels - 1;
+                            ffmpeg_printf(1,"aac object_type %d\n", object_type);
+                            ffmpeg_printf(1,"aac sample_index %d\n", sample_index);
+                            ffmpeg_printf(1,"aac chan_config %d\n", chan_config);
                             if(get_codecpar(stream)->extradata_size >= 2) 
                             {
                                 uint8_t *h = get_codecpar(stream)->extradata;
@@ -1944,12 +1959,13 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                                 chan_config = (h[1] & 0x78) >> 3;
                             }
 
-                            ffmpeg_printf(10,"aac object_type %d\n", object_type);
-                            ffmpeg_printf(10,"aac sample_index %d\n", sample_index);
-                            ffmpeg_printf(10,"aac chan_config %d\n", chan_config);
-                            ffmpeg_printf(10,"aac chan_config %d\n", chan_config);
+                            ffmpeg_printf(1,"aac object_type %d\n", object_type);
+                            ffmpeg_printf(1,"aac sample_index %d\n", sample_index);
+                            ffmpeg_printf(1,"aac chan_config %d\n", chan_config);
 
-                            object_type -= 1; // Cause of ADTS
+                            
+                            // https://wiki.multimedia.cx/index.php/ADTS
+                            object_type -= 1; //ADTS - profile, the MPEG-4 Audio Object Type minus 1
 
                             track.aacbuflen = AAC_HEADER_LENGTH;
                             track.aacbuf = malloc(8);
