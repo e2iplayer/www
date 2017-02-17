@@ -38,14 +38,14 @@
 #define IPTV_MAX_FILE_PATH 1024
 
 extern int ffmpeg_av_dict_set(const char *key, const char *value, int flags);
-extern void            aac_software_decoder_set(const int32_t val);
-extern void  aac_latm_software_decoder_setr_set(const int32_t val);
-extern void            dts_software_decoder_set(const int32_t val);
-extern void            wma_software_decoder_set(const int32_t val);
-extern void            ac3_software_decoder_set(const int32_t val);
-extern void           eac3_software_decoder_set(const int32_t val);
-extern void            mp3_software_decoder_set(const int32_t val);
-extern void                 rtmp_proto_impl_set(const int32_t val);
+extern void       aac_software_decoder_set(const int32_t val);
+extern void  aac_latm_software_decoder_set(const int32_t val);
+extern void       dts_software_decoder_set(const int32_t val);
+extern void       wma_software_decoder_set(const int32_t val);
+extern void       ac3_software_decoder_set(const int32_t val);
+extern void      eac3_software_decoder_set(const int32_t val);
+extern void       mp3_software_decoder_set(const int32_t val);
+extern void            rtmp_proto_impl_set(const int32_t val);
 
 extern void pcm_resampling_set(int32_t val);
 extern void stereo_software_decoder_set(int32_t val);
@@ -284,7 +284,7 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
             int flag = atoi(optarg);
             printf("Software decoder will be used for AAC codec\n");
             aac_software_decoder_set(flag & 0x01);
-            aac_latm_software_decoder_setr_set(flag & 0x02);
+            aac_latm_software_decoder_set(flag & 0x02);
             break;
         }
         case 'e':

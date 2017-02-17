@@ -40,18 +40,23 @@
 #include <errno.h>
 #include <sys/uio.h>
 
+#include <libavutil/intreadwrite.h>
+#include "ffmpeg/latmenc.h"
+
+
 #include "common.h"
 #include "output.h"
 #include "debug.h"
 #include "misc.h"
 #include "pes.h"
 #include "writer.h"
+#include "aac.h"
 
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
 
-#define AAC_HEADER_LENGTH       7
+#define SAM_WITH_DEBUG
 
 #ifdef SAM_WITH_DEBUG
 #define AAC_DEBUG
@@ -129,6 +134,8 @@ static unsigned char DefaultAACHeader[]    =  {
     0xfc
 };
 
+LATMContext *pLATMCtx = NULL;
+
 /* ***************************** */
 /* Prototypes                    */
 /* ***************************** */
@@ -139,14 +146,19 @@ static unsigned char DefaultAACHeader[]    =  {
 
 static int reset()
 {
+    if (pLATMCtx)
+    {
+        free(pLATMCtx);
+        pLATMCtx = NULL;
+    }
     return 0;
 }
 
-static int writeDataADTS(void* _call)
+static int _writeData(void *_call, int type)
 {
     WriterAVCallData_t* call = (WriterAVCallData_t*) _call;
     
-    aac_printf(10, "\n writeDataADTS \n");
+    aac_printf(10, "\n _writeData type[%d]\n", type);
 
     if (call == NULL)
     {
@@ -161,10 +173,22 @@ static int writeDataADTS(void* _call)
     }
     
     /* simple validation */
-    if(0xFF != call->data[0] || 0xF0 != (0xF0 & call->data[1]))
+    if (0 == type) // check ADTS header
     {
-        aac_err("parsing Data with missing syncword. ignoring...\n");
-        return 0;
+        if (0xFF != call->data[0] || 0xF0 != (0xF0 & call->data[1]))
+        {
+            aac_err("parsing Data with missing syncword. ignoring...\n");
+            return 0;
+        }
+    }
+    else // check LOAS header
+    {
+        if( !(call->len > 2 && call->data[0] == 0x56 && (call->data[1] >> 4) == 0xe &&
+            (AV_RB16(call->data + 1) & 0x1FFF) + 3 == call->len))
+        {
+            aac_err("parsing Data with wrong latm header. ignoring...\n");
+            return 0;
+        }
     }
     
     unsigned char PesHeader[PES_MAX_HEADER_SIZE];
@@ -178,13 +202,12 @@ static int writeDataADTS(void* _call)
     iov[0].iov_len = HeaderLength;
     iov[1].iov_base = call->data;
     iov[1].iov_len = call->len;
-    
     return writev(call->fd, iov, 2);
 }
 
-static int writeData(void* _call)
+static int writeDataADTS(void *_call)
 {
-    WriterAVCallData_t* call = (WriterAVCallData_t*) _call;
+    WriterAVCallData_t *call = (WriterAVCallData_t *) _call;
     
     aac_printf(10, "\n");
 
@@ -206,14 +229,15 @@ static int writeData(void* _call)
         return 0;
     }
     
-    if(call->private_data && 0 == strncmp("ADTS", call->private_data, call->private_size))
+    if( (call->private_data && 0 == strncmp("ADTS", call->private_data, call->private_size)) || 
+        HasADTSHeader(call->data, call->len) )
     {
-        return writeDataADTS(_call);
+        return _writeData(_call, 0);
     }
 
     uint32_t PacketLength = call->len + AAC_HEADER_LENGTH;
     uint8_t PesHeader[PES_MAX_HEADER_SIZE + AAC_HEADER_LENGTH];
-    uint32_t headerSize = InsertPesHeader (PesHeader, PacketLength, MPEG_AUDIO_PES_START_CODE, call->Pts, 0);;
+    uint32_t headerSize = InsertPesHeader (PesHeader, PacketLength, MPEG_AUDIO_PES_START_CODE, call->Pts, 0);
     uint8_t *pExtraData = &PesHeader[headerSize];
     
     aac_printf(10, "AudioPts %lld\n", call->Pts);
@@ -239,8 +263,6 @@ static int writeData(void* _call)
     /* buffer fullness(0x7FF for VBR) continued over 6 first bits + 2 zeros for
      * number of raw data blocks */
     pExtraData[6] = 0xFC;
-    
-    //PesHeader[6] = 0x81;
 
     struct iovec iov[2];
     iov[0].iov_base = PesHeader;
@@ -249,6 +271,76 @@ static int writeData(void* _call)
     iov[1].iov_len = call->len;
     
     return writev(call->fd, iov, 2);
+}
+
+static int writeDataLATM(void *_call)
+{
+    WriterAVCallData_t *call = (WriterAVCallData_t *) _call;
+    
+    aac_printf(10, "\n");
+
+    if (call == NULL)
+    {
+        aac_err("call data is NULL...\n");
+        return 0;
+    }
+    
+    if ((call->data == NULL) || (call->len <= 0))
+    {
+        aac_err("parsing NULL Data. ignoring...\n");
+        return 0;
+    }
+    
+    if( call->private_data && 0 == strncmp("LATM", call->private_data, call->private_size))
+    {
+        return _writeData(_call, 1);
+    }
+
+    aac_printf(10, "AudioPts %lld\n", call->Pts);
+    
+    if (!pLATMCtx)
+    {
+        pLATMCtx = malloc(sizeof(LATMContext));
+        memset(pLATMCtx, 0x00, sizeof(LATMContext));
+        pLATMCtx->mod = 14;
+        pLATMCtx->counter = 0;
+    }
+    
+    if (!pLATMCtx)
+    {
+        aac_err("parsing NULL pLATMCtx. ignoring...\n");
+        return 0;
+    }
+    
+    unsigned char PesHeader[PES_MAX_HEADER_SIZE];
+    int ret = latmenc_decode_extradata(pLATMCtx, call->private_data, call->private_size);
+    if (ret)
+    {
+        printf("%02x %02x %02x %02x %02x %02x %02x %02x\n", (int)call->data[0], (int)call->data[1], (int)call->data[2], (int)call->data[3],\
+                                                            (int)call->data[4], (int)call->data[5], (int)call->data[6], (int)call->data[7]);
+        aac_err("latm_decode_extradata failed. ignoring...\n");
+        return 0;
+    }
+    ret = latmenc_write_packet(pLATMCtx, call->data, call->len, call->private_data, call->private_size);
+    if (ret)
+    {
+        aac_err("latm_write_packet failed. ignoring...\n");
+        return 0;
+    }
+    
+    unsigned int  HeaderLength = InsertPesHeader (PesHeader,  pLATMCtx->len + 3, MPEG_AUDIO_PES_START_CODE, call->Pts, 0);
+
+    struct iovec iov[3];
+    iov[0].iov_base = PesHeader;
+    iov[0].iov_len  = HeaderLength;
+    
+    iov[1].iov_base = pLATMCtx->loas_header;
+    iov[1].iov_len  = 3;
+    
+    iov[2].iov_base = pLATMCtx->buffer;
+    iov[2].iov_len  = pLATMCtx->len;
+    
+    return writev(call->fd, iov, 3);
 }
 
 /* ***************************** */
@@ -266,7 +358,7 @@ static WriterCaps_t caps = {
 
 struct Writer_s WriterAudioAAC = {
     &reset,
-    &writeData,
+    &writeDataADTS,
     NULL,
     &caps
 };
@@ -276,13 +368,13 @@ static WriterCaps_t caps_aac_latm = {
     eAudio,
     "A_AAC_LATM",
     AUDIO_ENCODING_AAC,
-    -1,
+    -1, // it is some misunderstanding, this should be AUDIOTYPE_AAC_LATM
     -1
 };
 
 struct Writer_s WriterAudioAACLATM = {
     &reset,
-    &writeData,
+    &writeDataLATM,
     NULL,
     &caps_aac_latm
 };
@@ -298,7 +390,7 @@ static WriterCaps_t caps_aacplus = {
 
 struct Writer_s WriterAudioAACPLUS = {
     &reset,
-    &writeData,
+    &writeDataADTS,
     NULL,
     &caps_aacplus
 };

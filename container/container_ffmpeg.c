@@ -48,6 +48,8 @@
 #include <libswresample/swresample.h>
 #include <libavutil/opt.h>
 
+#include <ffmpeg/mpeg4audio.h>
+
 #include "common.h"
 #include "misc.h"
 #include "debug.h"
@@ -70,7 +72,6 @@
  */
 #define SAM_CUSTOM_IO
 
-//SULGE DEBUG ENABLED
 //#define SAM_WITH_DEBUG
 #ifdef SAM_WITH_DEBUG
 #define FFMPEG_DEBUG
@@ -172,9 +173,9 @@ void progressive_playback_set(int32_t val)
 static int32_t wma_software_decode = 0;
 static int32_t aac_software_decode = 0;
 #ifdef __sh__
-static int32_t aac_latm_software_decoder_set = 1;
+static int32_t aac_latm_software_decode = 1;
 #else
-static int32_t aac_latm_software_decoder_set = 0;
+static int32_t aac_latm_software_decode = 0;
 #endif
 
 static int32_t ac3_software_decode = 0;
@@ -207,9 +208,9 @@ void aac_software_decoder_set(const int32_t val)
     aac_software_decode = val;
 }
 
-void aac_latm_software_decoder_setr_set(const int32_t val)
+void aac_latm_software_decoder_set(const int32_t val)
 {
-    aac_latm_software_decoder_set = val;
+    aac_latm_software_decode = val;
 }
 
 void ac3_software_decoder_set(const int32_t val)
@@ -284,7 +285,7 @@ static void releaseMutex(const char *filename __attribute__((unused)), const con
     ffmpeg_printf(100, "::%d released mutex\n", line);
 }
 
-static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extradata, int extradata_size, int32_t *version)
+static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extradata, int extradata_size, int profile, int32_t *version)
 {
     ffmpeg_printf(10, "Codec ID: %d (%.8lx)\n", codec_id, codec_id);
     switch (codec_id)
@@ -351,21 +352,17 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
     case AV_CODEC_ID_AAC:
         if (extradata_size >= 2)
         {
-            int8_t object_type = extradata[0] >> 3;
-            // AAC stream must be injected to audio decoder with ADTS header
-            // to store value (object_type - 1) we have only 2 bits
-            // so we are not able to write value greater than 4
-            // due to this we have no audio with HE-AAC v2 Profile
-            //
-            // we will use LATM stream formatter
-            if (object_type > 4)
+            MPEG4AudioConfig m4ac;
+            int off = avpriv_mpeg4audio_get_config(&m4ac, extradata, extradata_size * 8, 1);
+            ffmpeg_printf(1,"aac [%d] off[%d]\n", m4ac.object_type, off);
+            if (off < 0 || 2 != m4ac.object_type)
             {
-                return (aac_latm_software_decoder_set) ? "A_IPCM" : "A_AAC_LATM";
+                return "A_IPCM";
             }
         }
-        return (aac_software_decode) ? "A_IPCM" : "A_AAC";
+        return (aac_software_decode) ? "A_IPCM" : "A_AAC";  
     case AV_CODEC_ID_AAC_LATM:
-        return (aac_latm_software_decoder_set) ? "A_IPCM" : "A_AAC_LATM";
+        return (aac_latm_software_decode) ? "A_IPCM" : "A_AAC_LATM";
     case AV_CODEC_ID_AC3:
         return  (ac3_software_decode) ? "A_IPCM" : "A_AC3";
     case AV_CODEC_ID_EAC3:
@@ -1759,7 +1756,8 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
 
             char *encoding = Codec2Encoding((int32_t)get_codecpar(stream)->codec_id, (int32_t)get_codecpar(stream)->codec_type, \
                                             (uint8_t *)get_codecpar(stream)->extradata, \
-                                            (int)get_codecpar(stream)->extradata_size, &version);
+                                            (int)get_codecpar(stream)->extradata_size, \
+                                            (int)get_codecpar(stream)->profile, &version);
             
             if(encoding != NULL && !strncmp(encoding, "A_IPCM", 6) && insert_pcm_as_lpcm)
             {
@@ -1979,14 +1977,23 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                             ffmpeg_printf(1,"aac object_type %d\n", object_type);
                             ffmpeg_printf(1,"aac sample_index %d\n", sample_index);
                             ffmpeg_printf(1,"aac chan_config %d\n", chan_config);
-                            if(get_codecpar(stream)->extradata_size >= 2) 
+                            
+                            if (get_codecpar(stream)->extradata_size >= 2)
                             {
-                                uint8_t *h = get_codecpar(stream)->extradata;
-                                object_type = h[0] >> 3;
-                                sample_index = ((h[0] & 0x7) << 1) |((h[1] & 0x80) >> 7);
-                                chan_config = (h[1] & 0x78) >> 3;
+                                MPEG4AudioConfig m4ac;
+                                int off = avpriv_mpeg4audio_get_config(&m4ac, get_codecpar(stream)->extradata, get_codecpar(stream)->extradata_size * 8, 1);
+                                if (off >= 0)
+                                {
+                                    object_type  = m4ac.object_type;
+                                    sample_index = m4ac.sampling_index;
+                                    if (sample_index == 0x0f)
+                                    {
+                                        sample_index = aac_get_sample_rate_index(m4ac.sample_rate);
+                                    }
+                                    chan_config  = m4ac.chan_config;
+                                }
                             }
-
+                            
                             ffmpeg_printf(1,"aac object_type %d\n", object_type);
                             ffmpeg_printf(1,"aac sample_index %d\n", sample_index);
                             ffmpeg_printf(1,"aac chan_config %d\n", chan_config);
@@ -1994,7 +2001,7 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                             
                             // https://wiki.multimedia.cx/index.php/ADTS
                             object_type -= 1; //ADTS - profile, the MPEG-4 Audio Object Type minus 1
-
+                            
                             track.aacbuflen = AAC_HEADER_LENGTH;
                             track.aacbuf = malloc(8);
                             track.aacbuf[0] = 0xFF;
@@ -2118,7 +2125,7 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                         enum AVSampleFormat sample_fmt = get_codecpar(stream)->sample_fmt;
 #endif
                         uint16_t bits_per_sample = sample_fmt>=0 ? (sample_fmt+1)*8 : 8;
-                        ffmpeg_printf(1, "bits_per_sample = %d (%d)\n", bits_per_sample, get_codecpar(stream)->sample_fmt);
+                        ffmpeg_printf(1, "bits_per_sample = %d (%d)\n", bits_per_sample, sample_fmt);
                         memcpy(track.aacbuf + 92, &bits_per_sample, 2); //bits_per_sample
 
                         memcpy(track.aacbuf + 94, &get_codecpar(stream)->extradata_size, 2); //bits_per_sample
@@ -2846,7 +2853,7 @@ static int32_t Command(void  *_context, ContainerCmd_t command, void *argument)
     return ret;
 }
 
-static char *FFMPEG_Capabilities[] = {"avi", "mkv", "mp4", "ts", "mov", "flv", "flac", "mp3", "mpg", "m2ts", "vob", "evo", "wmv","wma", "asf", "mp2", "m4v", "m4a", "fla", "divx", "dat", "mpeg", "trp", "mts", "vdr", "ogg", "wav", "wtv", "asx", "mvi", "png", "jpg", "ra", "ram", "rm", "3gp", "amr", "webm", "m3u8", "mpd", NULL };
+static char *FFMPEG_Capabilities[] = {"aac", "avi", "mkv", "mp4", "ts", "mov", "flv", "flac", "mp3", "mpg", "m2ts", "vob", "evo", "wmv","wma", "asf", "mp2", "m4v", "m4a", "fla", "divx", "dat", "mpeg", "trp", "mts", "vdr", "ogg", "wav", "wtv", "asx", "mvi", "png", "jpg", "ra", "ram", "rm", "3gp", "amr", "webm", "m3u8", "mpd", NULL };
 
 Container_t FFMPEGContainer = {
     "FFMPEG",

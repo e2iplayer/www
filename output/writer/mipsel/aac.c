@@ -51,14 +51,13 @@
 #include "misc.h"
 #include "pes.h"
 #include "writer.h"
+#include "aac.h"
 
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
 
-#define AAC_HEADER_LENGTH       7
-
-#define SAM_WITH_DEBUG
+//#define SAM_WITH_DEBUG
 
 #ifdef SAM_WITH_DEBUG
 #define AAC_DEBUG
@@ -207,7 +206,7 @@ static int _writeData(void *_call, int type)
     return writev_with_retry(call->fd, iov, 2);
 }
 
-static int writeDataDTS(void *_call)
+static int writeDataADTS(void *_call)
 {
     WriterAVCallData_t *call = (WriterAVCallData_t *) _call;
     
@@ -231,14 +230,15 @@ static int writeDataDTS(void *_call)
         return 0;
     }
     
-    if( call->private_data && 0 == strncmp("ADTS", call->private_data, call->private_size))
+    if( (call->private_data && 0 == strncmp("ADTS", call->private_data, call->private_size)) || 
+        HasADTSHeader(call->data, call->len) )
     {
         return _writeData(_call, 0);
     }
 
     uint32_t PacketLength = call->len + AAC_HEADER_LENGTH;
     uint8_t PesHeader[PES_MAX_HEADER_SIZE + AAC_HEADER_LENGTH];
-    uint32_t headerSize = InsertPesHeader (PesHeader, PacketLength, MPEG_AUDIO_PES_START_CODE, call->Pts, 0);;
+    uint32_t headerSize = InsertPesHeader (PesHeader, PacketLength, MPEG_AUDIO_PES_START_CODE, call->Pts, 0);
     uint8_t *pExtraData = &PesHeader[headerSize];
     
     aac_printf(10, "AudioPts %lld\n", call->Pts);
@@ -319,6 +319,8 @@ static int writeDataLATM(void *_call)
     int ret = latmenc_decode_extradata(pLATMCtx, call->private_data, call->private_size);
     if (ret)
     {
+        printf("%02x %02x %02x %02x %02x %02x %02x %02x\n", (int)call->data[0], (int)call->data[1], (int)call->data[2], (int)call->data[3],\
+                                                            (int)call->data[4], (int)call->data[5], (int)call->data[6], (int)call->data[7]);
         aac_err("latm_decode_extradata failed. ignoring...\n");
         return 0;
     }
@@ -359,7 +361,7 @@ static WriterCaps_t caps = {
 
 struct Writer_s WriterAudioAAC = {
     &reset,
-    &writeDataDTS,
+    &writeDataADTS,
     NULL,
     &caps
 };
@@ -391,7 +393,7 @@ static WriterCaps_t caps_aacplus = {
 
 struct Writer_s WriterAudioAACPLUS = {
     &reset,
-    &writeDataDTS,
+    &writeDataADTS,
     NULL,
     &caps_aacplus
 };
