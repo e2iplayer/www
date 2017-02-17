@@ -37,8 +37,8 @@ case "$EPLATFORM" in
         export PATH=$BASE_PATH"i686-linux/usr/bin/mipsel-oe-linux/":$PATH
         export SYSROOT=$BASE_PATH"et4x00"
         CFLAGS="  -mel -mabi=32 -march=mips32 "
-        FFMPEG_CFLAGS=" -mel -mabi=32 -march=mips32 -I$SYSROOT/usr/include/libxml2/"
-        FFMPEG_LDFLAGS=" -lrtmp -lxml2 "
+        FFMPEG_CFLAGS=" -mel -mabi=32 -march=mips32 -I$SYSROOT/usr/include/libxml2/ "
+        FFMPEG_LDFLAGS=" -lssl -lcrypto -lxml2 "
         ;;
     mipsel_softfpu)
         BASE_PATH="/mnt/new2/softFPU/openpli/build/tmp/sysroots/"
@@ -106,6 +106,7 @@ SOURCE_FILES+=" output/writer/mipsel/dts.c"
 SOURCE_FILES+=" output/writer/mipsel/amr.c"
 SOURCE_FILES+=" output/writer/mipsel/wma.c"
 
+SOURCE_FILES+=" output/writer/mipsel/h265.c"
 SOURCE_FILES+=" output/writer/mipsel/h264.c"
 SOURCE_FILES+=" output/writer/mipsel/h263.c"
 SOURCE_FILES+=" output/writer/mipsel/mpeg2.c"
@@ -116,6 +117,9 @@ SOURCE_FILES+=" output/writer/mipsel/vp.c"
 SOURCE_FILES+=" output/writer/mipsel/wmv.c"
 SOURCE_FILES+=" playback/playback.c"
 
+SOURCE_FILES+=" external/ffmpeg/src/bitstream.c"
+SOURCE_FILES+=" external/ffmpeg/src/latmenc.c"
+SOURCE_FILES+=" external/ffmpeg/src/mpeg4audio.c"
 CURR_PATH=$PWD
 
 EXTEPLAYER3_OUT_FILE=$CURR_PATH"/tmp/out/$EPLATFORM/exteplayer3_ffmpeg"$FFMPEG_VERSION
@@ -174,7 +178,7 @@ buildFFmpeg $FFMPEG_VERSION "true" "true"
 rm -rf $EXTEPLAYER3_OUT_FILE
 
 echo "FFMPEG_PATH = $FFMPEG_PATH"
-"$CROSS_COMPILE"gcc -fdata-sections -ffunction-sections -Wl,--gc-sections -Os $CFLAGS --sysroot=$SYSROOT $LDFLAGS $CPPFLAGS -I"$CURR_PATH"/include  -I$FFMPEG_PATH/usr/include/ -L$FFMPEG_PATH/usr/lib/ $SOURCE_FILES -o $EXTEPLAYER3_OUT_FILE -Wfatal-errors -lpthread -lavformat -lavcodec -lavutil -lswresample 
+"$CROSS_COMPILE"gcc -Wimplicit-function-declaration -Wimplicit-int -fdata-sections -ffunction-sections -Wl,--gc-sections -Os $CFLAGS --sysroot=$SYSROOT $LDFLAGS $CPPFLAGS -I"$CURR_PATH"/include -I"$CURR_PATH"/external/ -I$FFMPEG_PATH/usr/include/ -L$FFMPEG_PATH/usr/lib/ $SOURCE_FILES -o $EXTEPLAYER3_OUT_FILE -Wfatal-errors -lpthread -lavformat -lavcodec -lavutil -lswresample 
 "$CROSS_COMPILE"strip -s $EXTEPLAYER3_OUT_FILE
 
 #exit 0
