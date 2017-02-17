@@ -166,12 +166,6 @@ static int writeDataADTS(void* _call)
         aac_err("parsing Data with missing syncword. ignoring...\n");
         return 0;
     }
-
-    if (call->fd < 0)
-    {
-        aac_err("file pointer < 0. ignoring ...\n");
-        return 0;
-    }
     
     unsigned char PesHeader[PES_MAX_HEADER_SIZE];
 
@@ -184,6 +178,7 @@ static int writeDataADTS(void* _call)
     iov[0].iov_len = HeaderLength;
     iov[1].iov_base = call->data;
     iov[1].iov_len = call->len;
+    
     return writev(call->fd, iov, 2);
 }
 
@@ -276,20 +271,20 @@ struct Writer_s WriterAudioAAC = {
     &caps
 };
 
-static WriterCaps_t caps_aache = {
+static WriterCaps_t caps_aac_latm = {
     "aac",
     eAudio,
-    "A_AAC_HE",
+    "A_AAC_LATM",
     AUDIO_ENCODING_AAC,
     -1,
     -1
 };
 
-struct Writer_s WriterAudioAACHE = {
+struct Writer_s WriterAudioAACLATM = {
     &reset,
     &writeData,
     NULL,
-    &caps_aache
+    &caps_aac_latm
 };
 
 static WriterCaps_t caps_aacplus = {

@@ -171,6 +171,12 @@ void progressive_playback_set(int32_t val)
  */
 static int32_t wma_software_decode = 0;
 static int32_t aac_software_decode = 0;
+#ifdef __sh__
+static int32_t aac_latm_software_decoder_set = 1;
+#else
+static int32_t aac_latm_software_decoder_set = 0;
+#endif
+
 static int32_t ac3_software_decode = 0;
 static int32_t eac3_software_decode = 0;
 static int32_t dts_software_decode = 0;
@@ -199,6 +205,11 @@ void wma_software_decoder_set(const int32_t val)
 void aac_software_decoder_set(const int32_t val)
 {
     aac_software_decode = val;
+}
+
+void aac_latm_software_decoder_setr_set(const int32_t val)
+{
+    aac_latm_software_decoder_set = val;
 }
 
 void ac3_software_decoder_set(const int32_t val)
@@ -345,12 +356,16 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
             // to store value (object_type - 1) we have only 2 bits
             // so we are not able to write value greater than 4
             // due to this we have no audio with HE-AAC v2 Profile
+            //
+            // we will use LATM stream formatter
             if (object_type > 4)
             {
-                return "A_IPCM";
+                return (aac_latm_software_decoder_set) ? "A_IPCM" : "A_AAC_LATM";
             }
         }
         return (aac_software_decode) ? "A_IPCM" : "A_AAC";
+    case AV_CODEC_ID_AAC_LATM:
+        return (aac_latm_software_decoder_set) ? "A_IPCM" : "A_AAC_LATM";
     case AV_CODEC_ID_AC3:
         return  (ac3_software_decode) ? "A_IPCM" : "A_AC3";
     case AV_CODEC_ID_EAC3:
@@ -1910,7 +1925,21 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                     {
                         track.inject_raw_pcm = 1;
                     }
-                    else if(get_codecpar(stream)->codec_id == AV_CODEC_ID_AAC)
+                    else if (get_codecpar(stream)->codec_id == AV_CODEC_ID_AAC_LATM)
+                    {
+                        const char marker[] = "LATM";
+                        track.aacbuflen = sizeof(marker)/sizeof(char);
+                        track.aacbuf = malloc(track.aacbuflen);
+                        memcpy(track.aacbuf, marker, track.aacbuflen);
+                        
+                        ffmpeg_printf(10, "AV_CODEC_ID_AAC_LATM no extradata ACC header should be available in each frame\n");
+                        track.have_aacheader = 1;
+                    }
+                    else if(!strncmp(encoding, "A_AAC_LATM", 10))
+                    {
+                        ffmpeg_printf(10, "AV_CODEC_ID_AAC_LATM extradata will be used in aac writter\n");
+                    }
+                    else if (get_codecpar(stream)->codec_id == AV_CODEC_ID_AAC)
                     {
                         if( 0 == strncmp(avContext->iformat->name, "mpegts", 6) || 
                             0 == strncmp(avContext->iformat->name, "hls,", 4) )
@@ -1918,7 +1947,6 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                             const char marker[] = "ADTS";
                             track.aacbuflen = sizeof(marker)/sizeof(char);
                             track.aacbuf = malloc(track.aacbuflen);
-                            //assert(track.aacbuf);
                             memcpy(track.aacbuf, marker, track.aacbuflen);
                             
                             ffmpeg_printf(10, "AV_CODEC_ID_AAC no extradata ACC header should be available in each frame\n");

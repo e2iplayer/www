@@ -38,13 +38,14 @@
 #define IPTV_MAX_FILE_PATH 1024
 
 extern int ffmpeg_av_dict_set(const char *key, const char *value, int flags);
-extern void  aac_software_decoder_set(const int32_t val);
-extern void  dts_software_decoder_set(const int32_t val);
-extern void  wma_software_decoder_set(const int32_t val);
-extern void  ac3_software_decoder_set(const int32_t val);
-extern void eac3_software_decoder_set(const int32_t val);
-extern void  mp3_software_decoder_set(const int32_t val);
-extern void rtmp_proto_impl_set(const int32_t val);
+extern void            aac_software_decoder_set(const int32_t val);
+extern void  aac_latm_software_decoder_setr_set(const int32_t val);
+extern void            dts_software_decoder_set(const int32_t val);
+extern void            wma_software_decoder_set(const int32_t val);
+extern void            ac3_software_decoder_set(const int32_t val);
+extern void           eac3_software_decoder_set(const int32_t val);
+extern void            mp3_software_decoder_set(const int32_t val);
+extern void                 rtmp_proto_impl_set(const int32_t val);
 
 extern void pcm_resampling_set(int32_t val);
 extern void stereo_software_decoder_set(int32_t val);
@@ -274,14 +275,18 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
     int digit_optind = 0;
     int aopt = 0, bopt = 0;
     char *copt = 0, *dopt = 0;
-    while ( (c = getopt(argc, argv, "wae3dlsrimvn:x:u:c:h:o:p:t:9:0:1:f:")) != -1) 
+    while ( (c = getopt(argc, argv, "we3dlsrimva:n:x:u:c:h:o:p:t:9:0:1:f:")) != -1) 
     {
         switch (c) 
         {
         case 'a':
+        {
+            int flag = atoi(optarg);
             printf("Software decoder will be used for AAC codec\n");
-            aac_software_decoder_set(1);
+            aac_software_decoder_set(flag & 0x01);
+            aac_latm_software_decoder_setr_set(flag & 0x02);
             break;
+        }
         case 'e':
             printf("Software decoder will be used for EAC3 codec\n");
             eac3_software_decoder_set(1);
@@ -418,7 +423,7 @@ int main(int argc, char* argv[])
     if (0 != ParseParams(argc, argv, file, audioFile, &audioTrackIdx, &subtitleTrackIdx))
     {
         printf("Usage: exteplayer3 filePath [-u user-agent] [-c cookies] [-h headers] [-p prio] [-a] [-d] [-w] [-l] [-s] [-i] [-t audioTrackId] [-9 subtitleTrackId] [-x separateAudioUri] plabackUri\n");
-        printf("[-a] AAC software decoding\n");
+        printf("[-a 0|1|2|3] AAC software decoding - 1 bit - AAC ADTS, 2 - bit AAC LATM\n");
         printf("[-e] EAC3 software decoding\n");
         printf("[-3] AC3 software decoding\n");
         printf("[-d] DTS software decoding\n");

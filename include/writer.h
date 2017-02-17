@@ -50,7 +50,7 @@ extern Writer_t WriterAudioMPEGL3;
 extern Writer_t WriterAudioAC3;
 extern Writer_t WriterAudioEAC3;
 extern Writer_t WriterAudioAAC;
-extern Writer_t WriterAudioAACHE;
+extern Writer_t WriterAudioAACLATM;
 extern Writer_t WriterAudioAACPLUS;
 extern Writer_t WriterAudioDTS;
 extern Writer_t WriterAudioWMA;

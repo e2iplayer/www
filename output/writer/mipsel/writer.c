@@ -61,7 +61,7 @@ if (debug_level >= level) printf(x); } while (0)
 
 static Writer_t * AvailableWriter[] = {
     &WriterAudioAAC,
-    &WriterAudioAACHE,
+    &WriterAudioAACLATM,
     &WriterAudioAACPLUS,
     &WriterAudioAC3,
     &WriterAudioEAC3,
