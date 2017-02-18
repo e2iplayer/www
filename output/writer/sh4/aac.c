@@ -56,7 +56,7 @@
 /* Makros/Constants              */
 /* ***************************** */
 
-#define SAM_WITH_DEBUG
+//#define SAM_WITH_DEBUG
 
 #ifdef SAM_WITH_DEBUG
 #define AAC_DEBUG

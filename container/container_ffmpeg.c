@@ -1541,7 +1541,7 @@ int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int
     
     if ((err = avformat_open_input(&avContextTab[AVIdx], filename, fmt, pavio_opts)) != 0)
     {
-        if (err == AVERROR_UNKNOWN && rtmp_proto_impl == 0 &&
+        if (rtmp_proto_impl == 0 && //err == AVERROR_UNKNOWN && 
             rtmpProtoImplType == RTMP_NATIVE &&
             numOfRTMPImpl > 1)
         {
