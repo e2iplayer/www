@@ -1607,7 +1607,7 @@ diff -uNr ffmpeg-3.2.2/libavformat/dashdec.c ffmpeg-3.2.2_dash_demux/libavformat
 +    /* If this isn't a live stream, fill the total duration of the
 +     * stream. */
 +    if (!c->is_live) {
-+        s->duration = c->mediaPresentationDurationSec * AV_TIME_BASE;
++        s->duration = (int64_t) c->mediaPresentationDurationSec * AV_TIME_BASE;
 +    }
 +
 +    /* Open the demuxer for curent video and current audio components if available */
