@@ -46,6 +46,7 @@ extern void       ac3_software_decoder_set(const int32_t val);
 extern void      eac3_software_decoder_set(const int32_t val);
 extern void       mp3_software_decoder_set(const int32_t val);
 extern void            rtmp_proto_impl_set(const int32_t val);
+extern void        flv2mpeg4_converter_set(const int32_t val);
 
 extern void pcm_resampling_set(int32_t val);
 extern void stereo_software_decoder_set(int32_t val);
@@ -275,7 +276,7 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
     int digit_optind = 0;
     int aopt = 0, bopt = 0;
     char *copt = 0, *dopt = 0;
-    while ( (c = getopt(argc, argv, "we3dlsrimva:n:x:u:c:h:o:p:t:9:0:1:f:")) != -1) 
+    while ( (c = getopt(argc, argv, "we3dlsrimva:n:x:u:c:h:o:p:t:9:0:1:4:f:")) != -1) 
     {
         switch (c) 
         {
@@ -364,6 +365,11 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
         case '1':
             ffmpeg_av_dict_set("audio_rep_index", optarg, 0);
             break;
+        case '4':
+#ifdef HAVE_FLV2MPEG4_CONVERTER
+            flv2mpeg4_converter_set(atoi(optarg));
+#endif
+            break;
         case 'f':
         {
             char *ffopt = strdup(optarg);
@@ -418,7 +424,7 @@ int main(int argc, char* argv[])
     memset(argvBuff, '\0', sizeof(argvBuff));
     int commandRetVal = -1;
     /* inform client that we can handle additional commands */
-    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 33);
+    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 34);
 
     if (0 != ParseParams(argc, argv, file, audioFile, &audioTrackIdx, &subtitleTrackIdx))
     {
@@ -431,6 +437,9 @@ int main(int argc, char* argv[])
         printf("[-w] WMA1, WMA2, WMA/PRO software decoding\n");
         printf("[-l] software decoder use LPCM for injection (otherwise wav PCM will be used)\n");
         printf("[-s] software decoding as stereo [downmix]\n");
+#ifdef HAVE_FLV2MPEG4_CONVERTER
+        printf("[-4 0|1] - disable/enable flv2mpeg4 converter\n");
+#endif
         printf("[-i] play in infinity loop\n");
         printf("[-v] switch to live TS stream mode\n");
         printf("[-n 0|1|2] rtmp force protocol implementation auto(0) native/ffmpeg(1) or librtmp(2)\n");        

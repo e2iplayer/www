@@ -1,0 +1,14 @@
+build
+-----
+$ cd src
+$ gcc -O3 -o flv2mpeg4 avformat_writer.c dcprediction.c flv2mpeg4.c fetch.c flvdecoder.c m4vencode.c mp3header.c -lavformat -lavcodec -lavutil -I/usr/include/ffmpeg -L/usr/lib
+
+
+usage
+-----
+ - FLV to AVI(DIVX)
+   ./flv2mpeg4 input.flv output.avi
+ - FLV to MOV
+   ./flv2mpeg4 input.flv output.mov
+ - FLV to MP4(Video only)
+   ./flv2mpeg4 input.flv output.mp4

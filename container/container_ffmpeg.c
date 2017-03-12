@@ -166,6 +166,10 @@ void progressive_playback_set(int32_t val)
 #include "mpeg4p2_ffmpeg.c"
 #endif
 
+#ifdef HAVE_FLV2MPEG4_CONVERTER
+#include "flv2mpeg4_ffmpeg.c"
+#endif
+
 /* This is also bad solution 
  * such configuration should passed maybe 
  * via struct 
@@ -186,6 +190,12 @@ static int32_t stereo_software_decoder = 0;
 static int32_t insert_pcm_as_lpcm = 0;
 static int32_t mp3_software_decode = 0;
 static int32_t rtmp_proto_impl = 0; // 0 - auto, 1 - native, 2 - librtmp
+
+#ifdef HAVE_FLV2MPEG4_CONVERTER
+static int32_t flv2mpeg4_converter = 1;
+#else
+static int32_t flv2mpeg4_converter = 0;
+#endif
 
 /* ***************************** */
 /* MISC Functions                */
@@ -253,6 +263,11 @@ void rtmp_proto_impl_set(const int32_t val)
     rtmp_proto_impl = val;
 }
 
+void flv2mpeg4_converter_set(const int32_t val)
+{
+    flv2mpeg4_converter = val;
+}
+
 int32_t ffmpeg_av_dict_set(const char *key, const char *value, int32_t flags)
 {
     return av_dict_set(&avio_opts, key, value, flags);
@@ -299,7 +314,7 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
     case AV_CODEC_ID_H263I:
         return "V_H263";
     case AV_CODEC_ID_FLV1:
-        return "V_FLV";
+        return flv2mpeg4_converter ? "V_MPEG4" : "V_FLV";
     case AV_CODEC_ID_VP5:
     case AV_CODEC_ID_VP6:
     case AV_CODEC_ID_VP6F:
@@ -338,7 +353,7 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
     case AV_CODEC_ID_FFH264:
 #endif
         return "V_MPEG4/ISO/AVC";
-#if LIBAVCODEC_VERSION_MAJOR > 54
+#if LIBAVCODEC_VERSION_INT > AV_VERSION_INT(55, 92, 100)
     case AV_CODEC_ID_HEVC:
     // case AV_CODEC_ID_H265:
         return "V_HEVC";
@@ -543,7 +558,10 @@ static void FFMPEGThread(Context_t *context)
     memset(&mpeg4p2_context, 0, sizeof(Mpeg4P2Context));
     AVBitStreamFilterContext *mpeg4p2_bsf_context = av_bitstream_filter_init("mpeg4_unpack_bframes");
 #endif
-    
+#ifdef HAVE_FLV2MPEG4_CONVERTER
+    Flv2Mpeg4Context flv2mpeg4_context;
+    memset(&flv2mpeg4_context, 0, sizeof(Flv2Mpeg4Context));
+#endif
     ffmpeg_printf(10, "\n");
     while ( context->playback->isCreationPhase )
     {
@@ -644,6 +662,9 @@ static void FFMPEGThread(Context_t *context)
                 mpeg4p2_bsf_context = av_bitstream_filter_init("mpeg4_unpack_bframes");
             }
 #endif
+#ifdef HAVE_FLV2MPEG4_CONVERTER
+            flv2mpeg4_context_reset(&flv2mpeg4_context);
+#endif
         }
 
         int ffmpegStatus = 0;
@@ -705,6 +726,15 @@ static void FFMPEGThread(Context_t *context)
                         ffmpeg_err("cannot write mpeg4p2 packet\n");
                         exit(1);
                     }
+                    update_max_injected_pts(latestPts);
+                }
+                else
+#endif
+#ifdef HAVE_FLV2MPEG4_CONVERTER
+                if (get_codecpar(avContextTab[cAVIdx]->streams[packet.stream_index])->codec_id == AV_CODEC_ID_FLV1 &&
+                    0 == memcmp(videoTrack->Encoding, "V_MPEG4", 7) )
+                {
+                    flv2mpeg4_write_packet(context, &flv2mpeg4_context, videoTrack, cAVIdx, &currentVideoPts, &latestPts, &packet);
                     update_max_injected_pts(latestPts);
                 }
                 else
@@ -1846,7 +1876,7 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                     track.Id        = ((AVStream *) (track.stream))->id;
 
                     track.duration = (int64_t)av_rescale(stream->duration, (int64_t)stream->time_base.num * 1000, stream->time_base.den); 
-                    if(stream->duration == AV_NOPTS_VALUE) 
+                    if(stream->duration == AV_NOPTS_VALUE || 0 == strncmp(avContext->iformat->name, "dash", 4)) 
                     {
                         ffmpeg_printf(10, "Stream has no duration so we take the duration from context\n");
                         track.duration = (int64_t) avContext->duration / 1000;

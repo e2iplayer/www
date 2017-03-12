@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Container handling for all stream's handled by ffmpeg
  * konfetti 2010; based on code from crow
  *

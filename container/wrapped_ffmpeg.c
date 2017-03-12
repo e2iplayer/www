@@ -32,7 +32,7 @@ static void wrapped_frame_unref(void *param)
 
 static void wrapped_packet_unref(void *param)
 {
-#if (LIBAVCODEC_VERSION_MAJOR >= 55)
+#if (LIBAVCODEC_VERSION_MAJOR > 55)
     av_packet_unref(param);
 #else
     av_free_packet(param);

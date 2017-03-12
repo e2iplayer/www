@@ -1,0 +1,32 @@
+VIXY FLV Converter contains the code that based on FFmpeg. 
+The following is the code and copyright notice.
+
+
+/ffmpeg/libavcodec/bitstream.h
+
+/ffmpeg/libavcodec/bitstream.c
+ * Copyright (c) 2000, 2001 Fabrice Bellard.
+ * Copyright (c) 2002-2004 Michael Niedermayer <michaelni@gmx.at>
+
+/ffmpeg/libavcodec/h263.c
+ * Copyright (c) 2001 Juan J. Sierralta P.
+ * Copyright (c) 2002-2004 Michael Niedermayer <michaelni@gmx.at>
+
+/ffmpeg/libavcodec/h263data.h
+
+/ffmpeg/libavcodec/h263dec.c
+ * Copyright (c) 2001 Fabrice Bellard.
+ * Copyright (c) 2002-2004 Michael Niedermayer <michaelni@gmx.at>
+
+/ffmpeg/libavcodec/mpeg4data.h
+
+/ffmpeg/libavcodec/mpegvideo.c
+ * Copyright (c) 2000,2001 Fabrice Bellard.
+ * Copyright (c) 2002-2004 Michael Niedermayer <michaelni@gmx.at>
+ 
+/ffmpeg/libavcodec/mpegvideo.h
+ * Copyright (c) 2000, 2001, 2002 Fabrice Bellard.
+ * Copyright (c) 2002-2004 Michael Niedermayer
+ 
+And see /FFMPEG_CREDITS.
+Thanks.
