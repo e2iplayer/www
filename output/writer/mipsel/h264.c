@@ -348,7 +348,7 @@ static int writeData(void* _call)
         
         iov[ic++].iov_base = PesHeader;
         initialHeader = 0;
-        if (initialHeader) 
+        //if (initialHeader) // some rtsp streams can update codec data at runtime
         {
             initialHeader = 0;
             iov[ic].iov_base  = call->private_data;
@@ -362,14 +362,6 @@ static int writeData(void* _call)
         iov[ic].iov_base  = call->data;
         iov[ic++].iov_len = call->len;
         PacketLength     += call->len;
-        
-        /*Hellmaster1024: some packets will only be accepted by the player if we send one byte more than
-                          data is available. The content of this byte does not matter. It will be ignored
-                          by the player */
-        /*
-        iov[ic].iov_base = "\0";
-        iov[ic++].iov_len = 1;
-        */
         
         iov[0].iov_len = InsertPesHeader(PesHeader, -1, MPEG_VIDEO_PES_START_CODE, VideoPts, FakeStartCode);
         

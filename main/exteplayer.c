@@ -47,6 +47,7 @@ extern void      eac3_software_decoder_set(const int32_t val);
 extern void       mp3_software_decoder_set(const int32_t val);
 extern void            rtmp_proto_impl_set(const int32_t val);
 extern void        flv2mpeg4_converter_set(const int32_t val);
+extern void        sel_program_id_set(const int32_t val);
 
 extern void pcm_resampling_set(int32_t val);
 extern void stereo_software_decoder_set(int32_t val);
@@ -276,7 +277,7 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
     int digit_optind = 0;
     int aopt = 0, bopt = 0;
     char *copt = 0, *dopt = 0;
-    while ( (c = getopt(argc, argv, "we3dlsrimva:n:x:u:c:h:o:p:t:9:0:1:4:f:")) != -1) 
+    while ( (c = getopt(argc, argv, "we3dlsrimva:n:x:u:c:h:o:p:P:t:9:0:1:4:f:")) != -1) 
     {
         switch (c) 
         {
@@ -326,6 +327,9 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
             break;
         case 'p':
             SetNice(atoi(optarg));
+            break;
+        case 'P':
+            sel_program_id_set(atoi(optarg));
             break;
         case 't':
             *pAudioTrackIdx = atoi(optarg);
@@ -424,7 +428,7 @@ int main(int argc, char* argv[])
     memset(argvBuff, '\0', sizeof(argvBuff));
     int commandRetVal = -1;
     /* inform client that we can handle additional commands */
-    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 34);
+    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 35);
 
     if (0 != ParseParams(argc, argv, file, audioFile, &audioTrackIdx, &subtitleTrackIdx))
     {
@@ -445,6 +449,7 @@ int main(int argc, char* argv[])
         printf("[-n 0|1|2] rtmp force protocol implementation auto(0) native/ffmpeg(1) or librtmp(2)\n");        
         printf("[-o 0|1] set progressive download\n");
         printf("[-p value] nice value\n");
+        printf("[-P value] select Program ID from multi-service stream\n");
         printf("[-t id] audio track ID switched on at start\n");
         printf("[-9 id] subtitle track ID switched on at start\n");
         printf("[-h headers] set custom HTTP headers \"Name: value\\r\\nName: value\\r\\n\"\n");

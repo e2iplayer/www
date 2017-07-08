@@ -191,6 +191,8 @@ static int32_t insert_pcm_as_lpcm = 0;
 static int32_t mp3_software_decode = 0;
 static int32_t rtmp_proto_impl = 0; // 0 - auto, 1 - native, 2 - librtmp
 
+static int32_t g_sel_program_id = -1;
+
 #ifdef HAVE_FLV2MPEG4_CONVERTER
 static int32_t flv2mpeg4_converter = 1;
 #else
@@ -207,6 +209,11 @@ static void ffmpeg_silen_callback(void * avcl, int level, const char * fmt, va_l
 }
 
 static int32_t mutexInitialized = 0;
+
+void sel_program_id_set(const int32_t val)
+{
+    g_sel_program_id = val;
+}
 
 void wma_software_decoder_set(const int32_t val)
 {
@@ -1775,7 +1782,48 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
             break;
         }
         AVFormatContext *avContext = avContextTab[cAVIdx];
+        uint32_t *stream_index = NULL;
+        uint32_t nb_stream_indexes = 0;
+        
         ffmpeg_printf(1, "cAVIdx[%d]: number of streams: %d\n", cAVIdx, avContext->nb_streams);
+        
+        if (avContext->nb_programs > 0)
+        {
+            uint32_t n = 0;
+            ffmpeg_printf(1, "cAVIdx[%d]: stream with multi programs: num of programs %d\n", cAVIdx, avContext->nb_programs);
+            for (n = 0; n < avContext->nb_programs && (0 == nb_stream_indexes || stream_index == NULL); n++)
+            {
+                AVProgram *p = avContext->programs[n];
+                if (p->nb_stream_indexes)
+                {
+                    if (g_sel_program_id > 0)
+                    {
+                        if (g_sel_program_id == p->id)
+                        {
+                            stream_index = p->stream_index;
+                            nb_stream_indexes = p->nb_stream_indexes;
+                            ffmpeg_printf(1, "cAVIdx[%d]: select PROGRAM ID: %d\n", cAVIdx, (int32_t)p->id);
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        uint32_t m = 0;
+                        for (m = 0; m < p->nb_stream_indexes; m++)
+                        {
+                            AVStream *s = avContext->streams[p->stream_index[m]];
+                            if (get_codecpar(s)->codec_type == AVMEDIA_TYPE_VIDEO && get_codecpar(s)->width > 0)
+                            {
+                                ffmpeg_printf(1, "cAVIdx[%d]: PROGRAM ID: %d, width [%d]\n", cAVIdx, (int32_t)p->id, (int32_t)get_codecpar(s)->width);
+                                stream_index = p->stream_index;
+                                nb_stream_indexes = p->nb_stream_indexes;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
         
         int32_t n = 0;
         for (n = 0; n < avContext->nb_streams; n++) 
@@ -1783,11 +1831,29 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
             Track_t track;
             AVStream *stream = avContext->streams[n];
             int32_t version = 0;
+            char *encoding = NULL;
+            
+            if (nb_stream_indexes > 0 && stream_index != NULL)
+            {
+                uint32_t isStreamFromSelProg = 0;
+                uint32_t m = 0;
+                for (m = 0; m < nb_stream_indexes; m++)
+                {
+                    if (n == stream_index[m]) 
+                    {
+                        isStreamFromSelProg = 1;
+                        break;
+                    }
+                }
+                
+                if (!isStreamFromSelProg)
+                    continue; // skip this stream
+            }
 
-            char *encoding = Codec2Encoding((int32_t)get_codecpar(stream)->codec_id, (int32_t)get_codecpar(stream)->codec_type, \
-                                            (uint8_t *)get_codecpar(stream)->extradata, \
-                                            (int)get_codecpar(stream)->extradata_size, \
-                                            (int)get_codecpar(stream)->profile, &version);
+            encoding = Codec2Encoding((int32_t)get_codecpar(stream)->codec_id, (int32_t)get_codecpar(stream)->codec_type, \
+                                      (uint8_t *)get_codecpar(stream)->extradata, \
+                                      (int)get_codecpar(stream)->extradata_size, \
+                                      (int)get_codecpar(stream)->profile, &version);
             
             if(encoding != NULL && !strncmp(encoding, "A_IPCM", 6) && insert_pcm_as_lpcm)
             {
