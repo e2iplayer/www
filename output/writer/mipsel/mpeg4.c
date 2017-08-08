@@ -133,7 +133,7 @@ static int writeData(void* _call)
         PacketLength += call->private_size;
     }
 
-    struct iovec iov[2];
+    struct iovec iov[3];
     int ic = 0;
     iov[ic].iov_base = PesHeader;
     iov[ic++].iov_len = InsertPesHeader (PesHeader, PacketLength, MPEG_VIDEO_PES_START_CODE, call->Pts, 0);
