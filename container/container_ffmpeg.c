@@ -138,6 +138,7 @@ static int32_t do_seek_target_bytes = 0;
 
 static int64_t seek_target_seconds = 0;
 static int8_t do_seek_target_seconds = 0;
+static int64_t prev_seek_time_sec = -1;
 
 static int32_t seek_target_flag = 0;
 
@@ -616,14 +617,17 @@ static void FFMPEGThread(Context_t *context)
             {
                 ffmpeg_printf(10, "seek_target_seconds[%lld]\n", seek_target_seconds);
                 uint32_t i = 0;
-                for(i=0; i<IPTV_AV_CONTEXT_MAX_NUM; i+=1)
+                for(; i<IPTV_AV_CONTEXT_MAX_NUM; i+=1)
                 {
                     if(NULL != avContextTab[i])
                     {
+                        if (i == 1)
+                        {
+                            prev_seek_time_sec = seek_target_seconds;
+                        }
                         if (avContextTab[i]->start_time != AV_NOPTS_VALUE)
                         {
                             seek_target_seconds += avContextTab[i]->start_time;
-                            printf("SEEK SECONDS [%lld]\n", seek_target_seconds);
                         }
                         //av_seek_frame(avContextTab[i], -1, seek_target_seconds, 0);
                         avformat_seek_file(avContextTab[i], -1, INT64_MIN, seek_target_seconds, INT64_MAX, 0);
@@ -654,7 +658,10 @@ static void FFMPEGThread(Context_t *context)
             {
                 if(NULL != avContextTab[i])
                 {
-                    wrapped_avcodec_flush_buffers(i);
+                    if (i != 1)
+                    {
+                        wrapped_avcodec_flush_buffers(i);
+                    }
                 }
                 else
                 {
@@ -680,6 +687,12 @@ static void FFMPEGThread(Context_t *context)
             if(NULL != avContextTab[1])
             {
                 cAVIdx = currentVideoPts <= currentAudioPts ? 0 : 1;
+                if (1 == cAVIdx && prev_seek_time_sec >= 0 )
+                {
+                    avformat_seek_file(avContextTab[1], -1, (currentVideoPts / 90000) * AV_TIME_BASE - AV_TIME_BASE, (currentVideoPts / 90000) * AV_TIME_BASE, (currentVideoPts / 90000) * AV_TIME_BASE + AV_TIME_BASE, 0);
+                    prev_seek_time_sec = -1;
+                    wrapped_avcodec_flush_buffers(1);
+                }
             }
             else
             {

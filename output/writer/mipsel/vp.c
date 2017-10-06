@@ -96,7 +96,7 @@ static int reset()
     return 0;
 }
 
-static int writeData(void* _call, int is_vp6)
+static int writeData(void *_call, int is_vp6)
 {
     WriterAVCallData_t* call = (WriterAVCallData_t*) _call;
     vp_printf(10, "\n");
