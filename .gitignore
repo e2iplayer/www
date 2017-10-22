@@ -1,2 +1,10 @@
 tmp/out
 tmp/ffmpeg/tmp/
+
+tmp/prev
+tmp/ffmpeg/scripts*
+BRCMSources.sh
+SH4Sources.sh
+doall.sh
+make.sh
+

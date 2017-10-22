@@ -31,8 +31,14 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/mman.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <errno.h>
+
+#include <pthread.h>
 
 #include "common.h"
+#include "misc.h"
 
 #define DUMP_BOOL(x) 0 == x ? "false"  : "true"
 #define IPTV_MAX_FILE_PATH 1024
@@ -61,6 +67,98 @@ extern ManagerHandler_t        ManagerHandler;
 
 static Context_t *g_player = NULL;
 
+static void TerminateAllSockets(void)
+{
+    int i;
+    for(i=0; i<1024; ++i)
+    {
+        if( 0 == shutdown(i, SHUT_RDWR) )
+        {
+            /* yes, I know that this is not good practice and I know what this could cause 
+             * but in this use case it can be accepted. 
+             * We must close socket because without closing it recv will return 0 (after shutdown)
+             * 0 is not correctly handled by external libraries
+             */
+            close(i);
+        }
+    }
+}
+
+static int g_pfd[2] = {-1, -1}; /* Used to wake terminate thread */
+static int isPlaybackStarted = 0;
+static pthread_mutex_t playbackStartMtx;
+
+static void *TermThreadFun(void *arg)
+{
+    const char *socket_path = "/tmp/iptvplayer_extplayer_term_fd";
+    struct sockaddr_un addr;
+    int fd = -1;
+    int cl = -1;
+    int nfds = 1;
+    fd_set readfds;
+    
+    unlink(socket_path);
+    if ( (fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) 
+    {
+        perror("TermThreadFun socket error");
+        goto finish;
+    }
+
+    memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path)-1);
+
+    if (bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) 
+    {
+        perror("TermThreadFun bind error");
+        goto finish;
+    }
+
+    if (listen(fd, 1) == -1) 
+    {
+        perror("TermThreadFun listen error");
+        goto finish;
+    }
+
+    FD_ZERO(&readfds);
+    FD_SET(g_pfd[0], &readfds);
+    FD_SET(fd, &readfds);
+    
+    nfds = fd > g_pfd[0] ? fd + 1 : g_pfd[0] + 1;
+    
+    while (select(nfds, &readfds, NULL, NULL, NULL) == -1 
+           && errno == EINTR)
+    {
+        /* Restart if interrupted by signal */
+        continue;
+    }
+    
+    if (FD_ISSET(fd, &readfds))
+    {
+        /*
+        if ( (cl = accept(fd, NULL, NULL)) == -1)
+        {
+            perror("TermThreadFun accept error");
+            goto finish;
+        }
+        */
+        
+        pthread_mutex_lock(&playbackStartMtx);
+        PlaybackDieNow(1);
+        if (isPlaybackStarted)
+            TerminateAllSockets();
+        else
+            kill(getpid(), SIGINT);
+        pthread_mutex_unlock(&playbackStartMtx);
+    }
+
+finish:
+    close(cl);
+    close(fd);
+    pthread_exit(NULL);
+    
+}
+
 static void map_inter_file_path(char *filename)
 {
     if (0 == strncmp(filename, "iptv://", 7))
@@ -84,26 +182,26 @@ static void map_inter_file_path(char *filename)
 
 static int kbhit(void)
 {
-        struct timeval tv;
-        fd_set read_fd;
+    struct timeval tv;
+    fd_set read_fd;
 
-        tv.tv_sec=1;
-        tv.tv_usec=0;
+    tv.tv_sec=1;
+    tv.tv_usec=0;
 
-        FD_ZERO(&read_fd);
-        FD_SET(0,&read_fd);
+    FD_ZERO(&read_fd);
+    FD_SET(0,&read_fd);
 
-        if(-1 == select(1, &read_fd, NULL, NULL, &tv))
-        {
-            return 0;
-        }
-
-        if(FD_ISSET(0,&read_fd))
-        {
-            return 1;
-        }
-
+    if(-1 == select(1, &read_fd, NULL, NULL, &tv))
+    {
         return 0;
+    }
+
+    if(FD_ISSET(0,&read_fd))
+    {
+        return 1;
+    }
+
+    return 0;
 }
 
 static void SetBuffering()
@@ -415,6 +513,8 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
 
 int main(int argc, char* argv[]) 
 {
+    pthread_t termThread;
+    int isTermThreadStarted = 0;
     char file[IPTV_MAX_FILE_PATH];
     memset(file, '\0', sizeof(file));
     
@@ -428,7 +528,7 @@ int main(int argc, char* argv[])
     memset(argvBuff, '\0', sizeof(argvBuff));
     int commandRetVal = -1;
     /* inform client that we can handle additional commands */
-    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 35);
+    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 36);
 
     if (0 != ParseParams(argc, argv, file, audioFile, &audioTrackIdx, &subtitleTrackIdx))
     {
@@ -469,6 +569,35 @@ int main(int argc, char* argv[])
         printf("g_player allocate error\n");
         exit(1);
     }
+    
+    pthread_mutex_init(&playbackStartMtx, NULL);
+    do 
+    {
+        int flags = 0;
+        
+        if (pipe(g_pfd) == -1)
+            break;
+        
+        /* Make read and write ends of pipe nonblocking */
+        if ((flags = fcntl(g_pfd[0], F_GETFL)) == -1)
+            break;
+        
+        /* Make read end nonblocking */
+        flags |= O_NONBLOCK;
+        if (fcntl(g_pfd[0], F_SETFL, flags) == -1)
+            break;
+        
+        if ((flags = fcntl(g_pfd[1], F_GETFL)) == -1)
+            break;
+        
+        /* Make write end nonblocking */
+        flags |= O_NONBLOCK;
+        if (fcntl(g_pfd[1], F_SETFL, flags) == -1)
+            break;
+        
+        if(0 == pthread_create(&termThread, NULL, TermThreadFun, NULL))
+            isTermThreadStarted = 1;
+    } while(0);
 
     g_player->playback    = &PlaybackHandler;
     g_player->output      = &OutputHandler;
@@ -509,6 +638,10 @@ int main(int argc, char* argv[])
     }
     
     {
+        pthread_mutex_lock(&playbackStartMtx);
+        isPlaybackStarted = 1;
+        pthread_mutex_unlock(&playbackStartMtx);
+        
         commandRetVal = g_player->output->Command(g_player, OUTPUT_OPEN, NULL);
         fprintf(stderr, "{\"OUTPUT_OPEN\":{\"sts\":%d}}\n", commandRetVal);
         commandRetVal = g_player->playback->Command(g_player, PLAYBACK_PLAY, NULL);
@@ -761,6 +894,16 @@ int main(int argc, char* argv[])
     {
         free(g_player);
     }
+    
+    if (isTermThreadStarted && 1 == write(g_pfd[1], "x", 1))
+    {
+        pthread_join(termThread, NULL);
+    }
+    
+    pthread_mutex_destroy(&playbackStartMtx);
+    
+    close(g_pfd[0]);
+    close(g_pfd[1]);
 
     //printOutputCapabilities();
 
