@@ -343,7 +343,6 @@ static int writeData(void* _call)
     /* AnnexA */
     if( !avc3 && ((1 < call->private_size && 0 == call->private_data[0]) || 
         (call->len > 3) && ((call->data[0] == 0x00 && call->data[1] == 0x00 && call->data[2] == 0x00 && call->data[3] == 0x01) ||
-        (call->data[0] == 0x00 && call->data[1] == 0x00 && call->data[2] == 0x01) ||
         (call->data[0] == 0xff && call->data[1] == 0xff && call->data[2] == 0xff && call->data[3] == 0xff))))
     {
         uint32_t i = 0;
@@ -354,8 +353,7 @@ static int writeData(void* _call)
         
         while (InsertPrivData && i < 36 && (call->len - i) > 5)
         {
-            if ( (call->data[i] == 0x00 && call->data[i+1] == 0x00 && call->data[i+2] == 0x00 && call->data[i+3] == 0x01 && (call->data[i+4] == 0x67 || call->data[i+4] == 0x68)) ||
-                 (call->data[i] == 0x00 && call->data[i+1] == 0x00 && call->data[i+2] == 0x00 && (call->data[i+3] == 0x67 || call->data[i+3] == 0x68)) )
+            if ( (call->data[i] == 0x00 && call->data[i+1] == 0x00 && call->data[i+2] == 0x00 && call->data[i+3] == 0x01 && (call->data[i+4] == 0x67 || call->data[i+4] == 0x68)) )
             {
                 InsertPrivData = 0;
                 sps_pps_in_stream = 1;
