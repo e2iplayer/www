@@ -38,7 +38,7 @@ static int flv2mpeg4_context_write_packet_cb(void *usr_data, int keyframe, int p
     avOut.height     = ctx->track->height;
     avOut.type       = "video";
 
-    if (ctx->out_ctx->output->video->Write(ctx->out_ctx, &avOut) < 0)
+    if (Write(ctx->out_ctx->output->video->Write, ctx->out_ctx, &avOut) < 0)
     {
         ffmpeg_err("writing data to video device failed\n");
     }

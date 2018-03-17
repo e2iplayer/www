@@ -111,7 +111,7 @@ static void mpeg4p2_write(Context_t *ctx, Track_t *track, int avContextIdx, int6
     avOut.height     = track->height;
     avOut.type       = "video";
 
-    if (ctx->output->video->Write(ctx, &avOut) < 0)
+    if (Write(ctx->output->video->Write, ctx, &avOut) < 0)
     {
         ffmpeg_err("writing data to video device failed\n");
     }

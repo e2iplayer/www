@@ -219,6 +219,17 @@ static int Command(void  *_context, ManagerCmd_t command, void * argument)
         *((TrackDescription_t **)argument) = ManagerList(context);
         break;
     }
+    case MANAGER_REF_LIST:
+    {
+        *((Track_t **)argument) = Tracks;
+        break;
+    }
+    case MANAGER_REF_LIST_SIZE:
+    {
+        *((int*)argument) = TrackCount;
+        break;
+    }
+    
     case MANAGER_GET: 
     {
         audio_mgr_printf(20, "%s::%s MANAGER_GET\n", FILENAME, __FUNCTION__);

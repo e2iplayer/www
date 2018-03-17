@@ -67,7 +67,7 @@ typedef struct Output_s
 {
     char * Name;
     int32_t (* Command) (/*Context_t*/void  *, OutputCmd_t, void *);
-    int32_t (* Write) (/*Context_t*/void  *, void* privateData);
+    int32_t (* Write) (/*Context_t*/void  *, void *);
     char ** Capabilities;
 
 } Output_t;
