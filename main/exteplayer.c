@@ -528,7 +528,7 @@ int main(int argc, char* argv[])
     memset(argvBuff, '\0', sizeof(argvBuff));
     int commandRetVal = -1;
     /* inform client that we can handle additional commands */
-    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 39);
+    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 40);
 
     if (0 != ParseParams(argc, argv, file, audioFile, &audioTrackIdx, &subtitleTrackIdx))
     {
@@ -847,7 +847,21 @@ int main(int argc, char* argv[])
                 commandRetVal = g_player->playback->Command(g_player, PLAYBACK_PTS, &pts);
                 if (0 == commandRetVal)
                 {
-                    fprintf(stderr, "{\"J\":{\"ms\":%lld}}\n", pts / 90, commandRetVal);
+                    int64_t lastPts = 0;
+                    commandRetVal = 1;
+                    if (g_player->container && g_player->container->selectedContainer)
+                    {
+                        commandRetVal = g_player->container->selectedContainer->Command(g_player->container, CONTAINER_LAST_PTS, &lastPts);
+                    }
+                    
+                    if (0 == commandRetVal && lastPts != INVALID_PTS_VALUE)
+                    {
+                        fprintf(stderr, "{\"J\":{\"ms\":%lld,\"lms\":%lld}}\n", pts / 90, lastPts / 90);
+                    }
+                    else
+                    {
+                        fprintf(stderr, "{\"J\":{\"ms\":%lld}}\n", pts / 90);
+                    }
                 }
                 break;
             }

@@ -192,7 +192,7 @@ static void releaseMutex(const char *filename __attribute__((unused)), const con
 
 typedef int32_t (* Write_FN) (void  *, void *);
 
-static int32_t Write(Write_FN WriteFun, void *context, void *privateData)
+static int32_t Write(Write_FN WriteFun, void *context, void *privateData, int64_t pts)
 {
     /* Because Write is blocking we will release mutex which protect 
      * avformat structures, during write time
@@ -501,6 +501,10 @@ static int64_t calcPts(uint32_t avContextIdx, AVStream *stream, int64_t pts)
     {
         pts = INVALID_PTS_VALUE;
     }
+    else
+    {
+        pts &= 0x01FFFFFFFF; // PES header can handle only 33 bit PTS
+    }
 
     return pts;
 }
@@ -596,6 +600,14 @@ static void FFMPEGThread(Context_t *context)
     int8_t isWaitingForFinish = 0;
     while ( context && context->playback && context->playback->isPlaying ) 
     {
+        /* When user press PAUSE we call pause on AUDIO and VIDEO decoders, 
+         * we will not wait here because we can still fill 
+         * DVB drivers buffers at PAUSE time
+         * 
+         * In the future we can add buffering queue before injection in to 
+         * AUDIO, VIDEO decoders, so we can not wait here
+         */
+#ifdef __sh__
         //IF MOVIE IS PAUSED, WAIT
         if (context->playback->isPaused) 
         {
@@ -604,6 +616,7 @@ static void FFMPEGThread(Context_t *context)
             usleep(10000);
             continue;
         }
+#endif
 
         if (context->playback->isSeeking) 
         {
@@ -840,7 +853,7 @@ static void FFMPEGThread(Context_t *context)
                         avOut.infoFlags = 1; // TS container
                     }
 
-                    if (Write(context->output->video->Write, context, &avOut) < 0)
+                    if (Write(context->output->video->Write, context, &avOut, pts) < 0)
                     {
                         ffmpeg_err("writing data to video device failed\n");
                     }
@@ -916,7 +929,7 @@ static void FFMPEGThread(Context_t *context)
                     avOut.height     = 0;
                     avOut.type       = "audio";
 
-                    if (Write(context->output->audio->Write, context, &avOut) < 0)
+                    if (Write(context->output->audio->Write, context, &avOut, pts) < 0)
                     {
                         ffmpeg_err("(raw pcm) writing data to audio device failed\n");
                     }
@@ -1111,7 +1124,7 @@ static void FFMPEGThread(Context_t *context)
                         avOut.height     = 0;
                         avOut.type       = "audio";
 
-                        if (!context->playback->BackWard && Write(context->output->audio->Write, context, &avOut) < 0)
+                        if (!context->playback->BackWard && Write(context->output->audio->Write, context, &avOut, pts) < 0)
                         {
                             ffmpeg_err("writing data to audio device failed\n");
                         }
@@ -1134,7 +1147,7 @@ static void FFMPEGThread(Context_t *context)
                     avOut.height     = 0;
                     avOut.type       = "audio";
 
-                    if (!context->playback->BackWard && Write(context->output->audio->Write, context, &avOut) < 0)
+                    if (!context->playback->BackWard && Write(context->output->audio->Write, context, &avOut, pts) < 0)
                     {
                         ffmpeg_err("(aac) writing data to audio device failed\n");
                     }
@@ -1152,7 +1165,7 @@ static void FFMPEGThread(Context_t *context)
                     avOut.height     = 0;
                     avOut.type       = "audio";
 
-                    if (!context->playback->BackWard && Write(context->output->audio->Write, context, &avOut) < 0)
+                    if (!context->playback->BackWard && Write(context->output->audio->Write, context, &avOut, pts) < 0)
                     {
                         ffmpeg_err("writing data to audio device failed\n");
                     }
@@ -1183,7 +1196,7 @@ static void FFMPEGThread(Context_t *context)
                     subOut.data = (uint8_t *)packet.data;
                     subOut.pts = pts;
                     subOut.durationMS = duration;
-                    if (Write(context->output->subtitle->Write, context, &subOut) < 0)
+                    if (Write(context->output->subtitle->Write, context, &subOut, pts) < 0)
                     {
                         ffmpeg_err("writing data to teletext fifo failed\n");
                     }
