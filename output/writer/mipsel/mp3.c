@@ -133,7 +133,7 @@ static int writeData(void* _call)
     iov[1].iov_base = call->data;
     iov[1].iov_len = call->len;
 
-    int len = writev_with_retry(call->fd, iov, 2);
+    int len = call->WriteV(call->fd, iov, 2);
 
     mp3_printf(10, "mp3_Write-< len=%d\n", len);
     return len;

@@ -203,7 +203,7 @@ static int _writeData(void *_call, int type)
     iov[0].iov_len = HeaderLength;
     iov[1].iov_base = call->data;
     iov[1].iov_len = call->len;
-    return writev_with_retry(call->fd, iov, 2);
+    return call->WriteV(call->fd, iov, 2);
 }
 
 static int writeDataADTS(void *_call)
@@ -273,7 +273,7 @@ static int writeDataADTS(void *_call)
     iov[1].iov_base = call->data;
     iov[1].iov_len = call->len;
     
-    return writev_with_retry(call->fd, iov, 2);
+    return call->WriteV(call->fd, iov, 2);
 }
 
 static int writeDataLATM(void *_call)
@@ -343,7 +343,7 @@ static int writeDataLATM(void *_call)
     iov[2].iov_base = pLATMCtx->buffer;
     iov[2].iov_len  = pLATMCtx->len;
     
-    return writev_with_retry(call->fd, iov, 3);
+    return call->WriteV(call->fd, iov, 3);
 }
 
 /* ***************************** */

@@ -368,14 +368,14 @@ static void UpdateVideoTrack()
     HandleTracks(g_player->manager->video, (PlaybackCmd_t)-1, "vc");
 }
 
-static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *pAudioTrackIdx, int *subtitleTrackIdx)
+static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *pAudioTrackIdx, int *subtitleTrackIdx, uint32_t *linuxDvbBufferSizeMB)
 {   
     int ret = 0;
     int c;
     int digit_optind = 0;
     int aopt = 0, bopt = 0;
     char *copt = 0, *dopt = 0;
-    while ( (c = getopt(argc, argv, "we3dlsrimva:n:x:u:c:h:o:p:P:t:9:0:1:4:f:")) != -1) 
+    while ( (c = getopt(argc, argv, "we3dlsrimva:n:x:u:c:h:o:p:P:t:9:0:1:4:f:b:")) != -1) 
     {
         switch (c) 
         {
@@ -485,6 +485,9 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
             free(ffopt);
             break;
         }
+        case 'b':
+            *linuxDvbBufferSizeMB = 1024 * 1024 * atoi(optarg);
+            break;
         default:
             printf ("?? getopt returned character code 0%o ??\n", c);
             ret = -1;
@@ -524,15 +527,18 @@ int main(int argc, char* argv[])
     int audioTrackIdx = -1;
     int subtitleTrackIdx = -1;
     
+    uint32_t linuxDvbBufferSizeMB = 0; 
+    
     char argvBuff[256];
     memset(argvBuff, '\0', sizeof(argvBuff));
     int commandRetVal = -1;
     /* inform client that we can handle additional commands */
-    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 40);
+    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 41);
 
-    if (0 != ParseParams(argc, argv, file, audioFile, &audioTrackIdx, &subtitleTrackIdx))
+    if (0 != ParseParams(argc, argv, file, audioFile, &audioTrackIdx, &subtitleTrackIdx, &linuxDvbBufferSizeMB))
     {
         printf("Usage: exteplayer3 filePath [-u user-agent] [-c cookies] [-h headers] [-p prio] [-a] [-d] [-w] [-l] [-s] [-i] [-t audioTrackId] [-9 subtitleTrackId] [-x separateAudioUri] plabackUri\n");
+        printf("[-b size] Linux DVB output buffer size in MB\n");
         printf("[-a 0|1|2|3] AAC software decoding - 1 bit - AAC ADTS, 2 - bit AAC LATM\n");
         printf("[-e] EAC3 software decoding\n");
         printf("[-3] AC3 software decoding\n");
@@ -559,7 +565,6 @@ int main(int argc, char* argv[])
         printf("[-0 idx] video MPEG-DASH representation index\n");
         printf("[-1 idx] audio MPEG-DASH representation index\n");
         printf("[-f ffopt=ffval] any other ffmpeg option\n");
-        
         exit(1);
     }
     
@@ -613,6 +618,11 @@ int main(int argc, char* argv[])
     g_player->output->Command(g_player, OUTPUT_ADD, "audio");
     g_player->output->Command(g_player, OUTPUT_ADD, "video");
     g_player->output->Command(g_player, OUTPUT_ADD, "subtitle");
+    
+    //Set LINUX DVB additional write buffer size 
+    if (linuxDvbBufferSizeMB)
+        g_player->output->Command(g_player, OUTPUT_SET_BUFFER_SIZE, &linuxDvbBufferSizeMB);
+    
 
     g_player->manager->video->Command(g_player, MANAGER_REGISTER_UPDATED_TRACK_INFO, UpdateVideoTrack);
     if (strncmp(file, "rtmp", 4) && strncmp(file, "ffrtmp", 4))

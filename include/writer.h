@@ -21,6 +21,7 @@ typedef struct {
     unsigned int           Height;
     unsigned char          Version;
     unsigned int           InfoFlags;
+    ssize_t                (* WriteV) (int, const struct iovec *, size_t);
 } WriterAVCallData_t;
 
 

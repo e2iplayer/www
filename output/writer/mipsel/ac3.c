@@ -138,7 +138,7 @@ static int writeData(void* _call)
     
     ac3_printf(40, "PES HEADER LEN %d\n", iov[0].iov_len);
 
-    return writev_with_retry(call->fd, iov, 2);
+    return call->WriteV(call->fd, iov, 2);
 }
 
 /* ***************************** */
