@@ -28,6 +28,7 @@
 
 #include "misc.h"
 #include "writer.h"
+#include "common.h"
 
 /* ***************************** */
 /* Makros/Constants              */
@@ -97,6 +98,69 @@ static Writer_t * AvailableWriter[] = {
 /* ***************************** */
 /*  Functions                    */
 /* ***************************** */
+ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, const void *buf, size_t size)
+{
+    fd_set rfds;
+    fd_set wfds;
+    
+    ssize_t ret;
+    int retval = -1;
+    int maxFd = pipefd > fd ? pipefd : fd;
+    
+    while(size > 0 && 0 == PlaybackDieNow(0) && !context->playback->isSeeking)
+    {
+        FD_ZERO(&rfds);
+        FD_ZERO(&wfds);
+
+        FD_SET(pipefd, &rfds);
+        FD_SET(fd, &wfds);
+
+        retval = select(maxFd + 1, &rfds, &wfds, NULL, NULL);
+        if (retval < 0)
+        {
+            break;
+        }
+        
+        if(FD_ISSET(pipefd, &rfds))
+        {
+            char tmp;
+            /* flush pipefd pipe */
+            while(1 == read(pipefd, &tmp, 1));
+            break;
+        }
+        
+        if(FD_ISSET(fd, &wfds))
+        {
+            ret = write(fd, buf, size);
+            if (ret < 0)
+            {
+                switch(errno)
+                {
+                    case EINTR:
+                    case EAGAIN:
+                        continue;
+                    default:
+                        retval = -3;
+                        break;
+                }
+                if (retval < 0)
+                {
+                    break;
+                }
+            }
+                
+            if (ret < 0)
+            {
+                return ret;
+            }
+            
+            size -= ret;
+            buf += ret;
+        }
+    }
+    return 0;
+}
+
 ssize_t write_with_retry(int fd, const void *buf, size_t size)
 {
     ssize_t ret;

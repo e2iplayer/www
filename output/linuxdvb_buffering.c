@@ -25,6 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <fcntl.h>
 #include <memory.h>
 #include <string.h>
 #include <errno.h>
@@ -98,6 +99,7 @@ static uint32_t bufferingDataSize = 0;
 
 static int videofd = -1;
 static int audiofd = -1;
+static int g_pfd[2] = {-1, -1};
 
 /* ***************************** */
 /* Prototypes                    */
@@ -106,14 +108,42 @@ static int audiofd = -1;
 /* ***************************** */
 /* MISC Functions                */
 /* ***************************** */
+static void WriteWakeUp()
+{
+    write(g_pfd[1], "x", 1);
+}
 
 /* **************************** */
 /* Worker Thread                */
 /* **************************** */
 static void LinuxDvbBuffThread(Context_t *context) 
 {
+    int flags = 0;
     static BufferingNode_t *nodePtr = NULL;
     buff_printf(20, "ENTER\n");
+    
+    if (pipe(g_pfd) == -1)
+        buff_err("critical error\n");
+    
+    /* Make read and write ends of pipe nonblocking */
+    if ((flags = fcntl(g_pfd[0], F_GETFL)) == -1)
+        buff_err("critical error\n");
+    
+    /* Make read end nonblocking */
+    flags |= O_NONBLOCK;
+    if (fcntl(g_pfd[0], F_SETFL, flags) == -1)
+        buff_err("critical error\n");
+    
+    if ((flags = fcntl(g_pfd[1], F_GETFL)) == -1)
+        buff_err("critical error\n");
+    
+    /* Make write end nonblocking */
+    flags |= O_NONBLOCK;
+    if (fcntl(g_pfd[1], F_SETFL, flags) == -1)
+        buff_err("critical error\n");
+    
+    PlaybackDieNowRegisterCallback(WriteWakeUp);
+    
     while (0 == PlaybackDieNow(0))
     {
         pthread_mutex_lock(&bufferingMtx);
@@ -165,9 +195,9 @@ static void LinuxDvbBuffThread(Context_t *context)
             /* Write data to valid output */
             uint8_t *dataPtr = (uint8_t *)nodePtr + sizeof(BufferingNode_t);
             int fd = nodePtr->dataType == OUTPUT_VIDEO ? videofd : audiofd;
-            if (0 != write_with_retry(fd, dataPtr, nodePtr->dataSize))
+            if (0 != WriteWithRetry(context, g_pfd[0], fd, dataPtr, nodePtr->dataSize))
             {
-                printf("Something is WRONG\n");
+                buff_err("Something is WRONG\n");
             }
         }
     }
@@ -178,6 +208,10 @@ static void LinuxDvbBuffThread(Context_t *context)
     
     buff_printf(20, "EXIT\n");
     hasBufferingThreadStarted = false;
+    close(g_pfd[0]);
+    close(g_pfd[1]);
+    g_pfd[0] = -1;
+    g_pfd[1] = -1;
 }
 
 int32_t WriteSetBufferingSize(const uint32_t bufferSize)
@@ -251,6 +285,10 @@ int32_t LinuxDvbBuffClose(Context_t *context)
     if (hasBufferingThreadStarted) 
     {
         struct timespec max_wait = {0, 0};
+        
+        /* WakeUp if we are waiting in the write */ 
+        WriteWakeUp();
+        
         pthread_mutex_lock(&bufferingMtx);
         /* wait for thread end */
         clock_gettime(CLOCK_REALTIME, &max_wait);
@@ -282,6 +320,10 @@ int32_t LinuxDvbBuffFlush(Context_t *context)
 {
     static BufferingNode_t *nodePtr = NULL;
     buff_printf(40, "ENTER bufferingQueueHead[%p]\n", bufferingQueueHead);
+    
+    /* signal if we are waiting for write to DVB decoders */
+    WriteWakeUp();
+
     pthread_mutex_lock(&bufferingMtx);
     while (bufferingQueueHead)
     {
