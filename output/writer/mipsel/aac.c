@@ -241,8 +241,6 @@ static int writeDataADTS(void *_call)
     if( (call->private_data && 0 == strncmp("ADTS", call->private_data, call->private_size)) || 
         HasADTSHeader(call->data, call->len) )
     {
-        //(aacbuf[2] & 0x1F) | 0x40
-        
         //printf("%hhx %hhx %hhx %hhx %hhx %hhx %hhx %hhx\n", call->data[0], call->data[1], call->data[2], call->data[3], call->data[4], call->data[5], call->data[6], call->data[7]);
         return _writeData(_call, 0);
     }

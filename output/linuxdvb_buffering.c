@@ -342,6 +342,18 @@ int32_t LinuxDvbBuffFlush(Context_t *context)
     pthread_cond_signal(&bufferingDataConsumedCond);
     pthread_mutex_unlock(&bufferingMtx);
     buff_printf(40, "EXIT\n");
+    
+    return 0;
+}
+
+int32_t LinuxDvbBuffResume(Context_t *context)
+{
+    /* signal if we are waiting for write to DVB decoders 
+     * 
+     */
+    WriteWakeUp();
+    
+    return 0;
 }
 
 ssize_t BufferingWriteV(int fd, const struct iovec *iov, size_t ic) 

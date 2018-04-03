@@ -99,6 +99,8 @@ pthread_mutex_t LinuxDVBmutex;
 int32_t LinuxDvbBuffOpen(Context_t *context, char *type, int outfd);
 int32_t LinuxDvbBuffClose(Context_t *context);
 int32_t LinuxDvbBuffFlush(Context_t *context);
+int32_t LinuxDvbBuffResume(Context_t *context);
+
 ssize_t BufferingWriteV(int fd, const struct iovec *iov, size_t ic);
 int32_t WriteSetBufferingSize(const uint32_t bufferSize);
 
@@ -418,6 +420,9 @@ int LinuxDvbContinue(Context_t  *context __attribute__((unused)), char * type) {
             ret = cERR_LINUXDVB_ERROR;
         }
     }
+    
+    if (isBufferedOutput)
+        LinuxDvbBuffResume(context);
 
     linuxdvb_printf(10, "exiting\n");
     

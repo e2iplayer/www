@@ -98,6 +98,12 @@ static Writer_t * AvailableWriter[] = {
 /* ***************************** */
 /*  Functions                    */
 /* ***************************** */
+static void FlusPipe(int pipefd)
+{
+    char tmp;
+    while(1 == read(pipefd, &tmp, 1));
+}
+
 ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, const void *buf, size_t size)
 {
     fd_set rfds;
@@ -106,6 +112,7 @@ ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, const void *buf, 
     ssize_t ret;
     int retval = -1;
     int maxFd = pipefd > fd ? pipefd : fd;
+    struct timeval tv;
     
     while(size > 0 && 0 == PlaybackDieNow(0) && !context->playback->isSeeking)
     {
@@ -115,18 +122,34 @@ ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, const void *buf, 
         FD_SET(pipefd, &rfds);
         FD_SET(fd, &wfds);
 
-        retval = select(maxFd + 1, &rfds, &wfds, NULL, NULL);
+        /* When we PAUSE LINUX DVB outputs buffers then audio/video buffers 
+         * will be filled to full unfortunately, in such case after resume 
+         * select never return with fd set - bug in DVB drivers?
+         * So, there will be to workarounds:
+         *   1. write to pipe pipe at resume to exit select immediately
+         *   2. even if fd is not set exit from select after 0,1s 
+         *      (it seems that second workaround is not needed)
+         */
+        //tv.tv_sec = 0;
+        //tv.tv_usec = 100000; // 100ms
+        
+        retval = select(maxFd + 1, &rfds, &wfds, NULL, NULL); //&tv);
         if (retval < 0)
         {
             break;
         }
         
+        //if (retval == 0)
+        //{
+        //    //printf("RETURN FROM SELECT DUE TO TIMEOUT TIMEOUT\n");
+        //    continue;
+        //}
+        
         if(FD_ISSET(pipefd, &rfds))
         {
-            char tmp;
-            /* flush pipefd pipe */
-            while(1 == read(pipefd, &tmp, 1));
-            break;
+            FlusPipe(pipefd);
+            //printf("RETURN FROM SELECT DUE TO pipefd SET\n");
+            continue;
         }
         
         if(FD_ISSET(fd, &wfds))
@@ -147,11 +170,18 @@ ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, const void *buf, 
                 {
                     break;
                 }
-            }
                 
-            if (ret < 0)
-            {
                 return ret;
+            }
+            else if (ret == 0)
+            {
+                //printf("This should not happen. Select return fd ready to write, but write return 0, errno [%d]\n", errno);
+                tv.tv_sec = 0;
+                tv.tv_usec = 10000; // 10ms
+                retval = select(pipefd + 1, &rfds, NULL, NULL, &tv);
+                if (retval)
+                    FlusPipe(pipefd);
+                continue;
             }
             
             size -= ret;
