@@ -210,6 +210,9 @@ int LinuxDvbClose(Context_t  *context, char *type)
     LinuxDvbStop(context, type);
 
     getLinuxDVBMutex(FILENAME, __FUNCTION__,__LINE__);
+    
+    if (isBufferedOutput)
+        LinuxDvbBuffClose(context);
 
     if (video && videofd != -1)
     {
@@ -221,9 +224,6 @@ int LinuxDvbClose(Context_t  *context, char *type)
         close(audiofd);
         audiofd = -1;
     }
-
-    if (isBufferedOutput)
-        LinuxDvbBuffClose(context);
 
     releaseLinuxDVBMutex(FILENAME, __FUNCTION__, __LINE__);
     return cERR_LINUXDVB_NO_ERROR;
