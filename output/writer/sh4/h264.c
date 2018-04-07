@@ -99,6 +99,7 @@ const  uint8_t   Head[] = {0, 0, 0, 1};
 static int32_t   initialHeader = 1;
 static uint32_t  NalLengthBytes = 1;
 static int       avc3 = 0;
+static int       sps_pps_in_stream = 0;
 /* ***************************** */
 /* Prototypes                    */
 /* ***************************** */
@@ -257,12 +258,23 @@ static int32_t writeData(void* _call)
         (call->len > 3) && ((call->data[0] == 0x00 && call->data[1] == 0x00 && call->data[2] == 0x00 && call->data[3] == 0x01) ||
         (call->data[0] == 0xff && call->data[1] == 0xff && call->data[2] == 0xff && call->data[3] == 0xff))))
     {
+        uint32_t i = 0;
+        uint8_t InsertPrivData = !sps_pps_in_stream;
         uint32_t PacketLength = 0;
-        uint32_t FakeStartCode = /*(call->Version << 8) | */PES_VERSION_FAKE_START_CODE;
-        
+        uint32_t FakeStartCode = PES_VERSION_FAKE_START_CODE;
         iov[ic++].iov_base = PesHeader;
-        initialHeader = 0;
-        if (initialHeader) 
+        
+        while (InsertPrivData && i < 36 && (call->len - i) > 5)
+        {
+            if ( (call->data[i] == 0x00 && call->data[i+1] == 0x00 && call->data[i+2] == 0x00 && call->data[i+3] == 0x01 && (call->data[i+4] == 0x67 || call->data[i+4] == 0x68)) )
+            {
+                InsertPrivData = 0;
+                sps_pps_in_stream = 1;
+            }
+            i += 1;
+        }
+        
+        if (InsertPrivData && call->private_size > 0 /*&& initialHeader*/) // some rtsp streams can update codec data at runtime
         {
             initialHeader = 0;
             iov[ic].iov_base  = call->private_data;
@@ -293,7 +305,7 @@ static int32_t writeData(void* _call)
          return 0;
     }
 
-    if (initialHeader)
+    if (!avc3)
     {
         uint8_t  *private_data = call->private_data;
         uint32_t  private_size = call->private_size;

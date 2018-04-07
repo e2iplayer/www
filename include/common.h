@@ -9,12 +9,16 @@
 #include "playback.h"
 #include <pthread.h>
 
-typedef char PlayFilesTab_t[2];
-
 typedef struct PlayFiles_t 
 { 
     char *szFirstFile;
     char *szSecondFile;
+    char *szFirstMoovAtomFile;
+    char *szSecondMoovAtomFile;
+    uint64_t iFirstFileSize;
+    uint64_t iSecondFileSize;
+    uint64_t iFirstMoovAtomOffset;
+    uint64_t iSecondMoovAtomOffset;
 } PlayFiles_t;
 
 typedef struct Context_s 

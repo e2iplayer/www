@@ -366,14 +366,14 @@ static void UpdateVideoTrack()
     HandleTracks(g_player->manager->video, (PlaybackCmd_t)-1, "vc");
 }
 
-static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *pAudioTrackIdx, int *subtitleTrackIdx, uint32_t *linuxDvbBufferSizeMB)
+static int ParseParams(int argc,char* argv[], PlayFiles_t *playbackFiles, int *pAudioTrackIdx, int *subtitleTrackIdx, uint32_t *linuxDvbBufferSizeMB)
 {   
     int ret = 0;
     int c;
     int digit_optind = 0;
     int aopt = 0, bopt = 0;
     char *copt = 0, *dopt = 0;
-    while ( (c = getopt(argc, argv, "we3dlsrimva:n:x:u:c:h:o:p:P:t:9:0:1:4:f:b:")) != -1) 
+    while ( (c = getopt(argc, argv, "we3dlsrimva:n:x:u:c:h:o:p:P:t:9:0:1:4:f:b:F:S:O:")) != -1) 
     {
         switch (c) 
         {
@@ -434,8 +434,13 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
             *subtitleTrackIdx = atoi(optarg);
             break;
         case 'x':
-            strncpy(audioFile, optarg, IPTV_MAX_FILE_PATH-1);
-            map_inter_file_path(audioFile);
+            if (optarg[0] != '\0')
+            {
+                playbackFiles->szSecondFile = malloc(IPTV_MAX_FILE_PATH);
+                strncpy(playbackFiles->szSecondFile, optarg, IPTV_MAX_FILE_PATH-1);
+                playbackFiles->szSecondFile[IPTV_MAX_FILE_PATH] = '\0';
+                map_inter_file_path(playbackFiles->szSecondFile);
+            }
             break;
         case 'h':
             ffmpeg_av_dict_set("headers", optarg, 0);
@@ -486,6 +491,21 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
         case 'b':
             *linuxDvbBufferSizeMB = 1024 * 1024 * atoi(optarg);
             break;
+        case 'S':
+            playbackFiles->iFirstFileSize = (uint64_t) strtoull(optarg, (char **)NULL, 10);
+            break;
+        case 'O':
+            playbackFiles->iFirstMoovAtomOffset = (uint64_t) strtoull(optarg, (char **)NULL, 10);
+            break;
+        case 'F':
+            if (optarg[0] != '\0')
+            {
+                playbackFiles->szFirstMoovAtomFile = malloc(IPTV_MAX_FILE_PATH);
+                strncpy(playbackFiles->szFirstMoovAtomFile, optarg, IPTV_MAX_FILE_PATH-1);
+                playbackFiles->szFirstMoovAtomFile[IPTV_MAX_FILE_PATH] = '\0';
+                map_inter_file_path(playbackFiles->szFirstMoovAtomFile);
+            }
+            break;
         default:
             printf ("?? getopt returned character code 0%o ??\n", c);
             ret = -1;
@@ -495,14 +515,15 @@ static int ParseParams(int argc,char* argv[], char *file, char *audioFile, int *
     if (0 == ret && optind < argc) 
     {
         ret = 0;
-        
+        playbackFiles->szFirstFile = malloc(IPTV_MAX_FILE_PATH);
         if(NULL == strstr(argv[optind], "://"))
         {
-            strcpy(file, "file://");
+            strcpy(playbackFiles->szFirstFile, "file://");
         }
-        strcat(file, argv[optind]);
-        map_inter_file_path(file);
-        printf("file: [%s]\n", file);
+        strcat(playbackFiles->szFirstFile, argv[optind]);
+        playbackFiles->szFirstFile[IPTV_MAX_FILE_PATH] = '\0';
+        map_inter_file_path(playbackFiles->szFirstFile);
+        printf("file: [%s]\n", playbackFiles->szFirstFile);
         ++optind;
     }
     else
@@ -516,11 +537,6 @@ int main(int argc, char* argv[])
 {
     pthread_t termThread;
     int isTermThreadStarted = 0;
-    char file[IPTV_MAX_FILE_PATH];
-    memset(file, '\0', sizeof(file));
-    
-    char audioFile[IPTV_MAX_FILE_PATH];
-    memset(audioFile, '\0', sizeof(audioFile));
     
     int audioTrackIdx = -1;
     int subtitleTrackIdx = -1;
@@ -531,9 +547,11 @@ int main(int argc, char* argv[])
     memset(argvBuff, '\0', sizeof(argvBuff));
     int commandRetVal = -1;
     /* inform client that we can handle additional commands */
-    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 45);
+    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 46);
 
-    if (0 != ParseParams(argc, argv, file, audioFile, &audioTrackIdx, &subtitleTrackIdx, &linuxDvbBufferSizeMB))
+    PlayFiles_t playbackFiles;
+    memset(&playbackFiles, 0x00, sizeof(playbackFiles));
+    if (0 != ParseParams(argc, argv, &playbackFiles, &audioTrackIdx, &subtitleTrackIdx, &linuxDvbBufferSizeMB))
     {
         printf("Usage: exteplayer3 filePath [-u user-agent] [-c cookies] [-h headers] [-p prio] [-a] [-d] [-w] [-l] [-s] [-i] [-t audioTrackId] [-9 subtitleTrackId] [-x separateAudioUri] plabackUri\n");
         printf("[-b size] Linux DVB output buffer size in MB\n");
@@ -563,6 +581,9 @@ int main(int argc, char* argv[])
         printf("[-0 idx] video MPEG-DASH representation index\n");
         printf("[-1 idx] audio MPEG-DASH representation index\n");
         printf("[-f ffopt=ffval] any other ffmpeg option\n");
+        printf("[-F path to additional file with moov atom data (used for mp4 playback in progressive download mode)\n");
+        printf("[-O moov atom offset in the original file (used for mp4 playback in progressive download mode)\n");
+        printf("[-S remote file size (used for mp4 playback in progressive download mode)\n");
         exit(1);
     }
     
@@ -623,19 +644,13 @@ int main(int argc, char* argv[])
     
 
     g_player->manager->video->Command(g_player, MANAGER_REGISTER_UPDATED_TRACK_INFO, UpdateVideoTrack);
-    if (strncmp(file, "rtmp", 4) && strncmp(file, "ffrtmp", 4))
+    if (strncmp(playbackFiles.szFirstFile, "rtmp", 4) && strncmp(playbackFiles.szFirstFile, "ffrtmp", 4))
     {
         g_player->playback->noprobe = 1;
     }
 
-    PlayFiles_t playbackFiles = {file, NULL};
-    if('\0' != audioFile[0])
-    {
-        playbackFiles.szSecondFile = audioFile;
-    }
-    
     commandRetVal = g_player->playback->Command(g_player, PLAYBACK_OPEN, &playbackFiles);
-    fprintf(stderr, "{\"PLAYBACK_OPEN\":{\"OutputName\":\"%s\", \"file\":\"%s\", \"sts\":%d}}\n", g_player->output->Name, file, commandRetVal);
+    fprintf(stderr, "{\"PLAYBACK_OPEN\":{\"OutputName\":\"%s\", \"file\":\"%s\", \"sts\":%d}}\n", g_player->output->Name, playbackFiles.szFirstFile, commandRetVal);
     if(commandRetVal < 0)
     {
         if(NULL != g_player)

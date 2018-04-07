@@ -1320,58 +1320,160 @@ static int32_t interrupt_cb(void *ctx)
 }
 
 #ifdef SAM_CUSTOM_IO
+typedef struct CustomIOCtx_t 
+{ 
+    FILE *pFile;
+    FILE *pMoovFile;
+    int64_t iOffset;
+    
+    char *szFile;
+    uint64_t iFileSize;
+    char *szMoovAtomFile;
+    uint64_t iMoovAtomOffset;
+} CustomIOCtx_t;
+
+CustomIOCtx_t* custom_io_tab[IPTV_AV_CONTEXT_MAX_NUM] = {NULL, NULL};
+
 int SAM_ReadFunc(void *ptr, uint8_t *buffer, int lSize)
 {
-    size_t ret = fread ( (void *) buffer, (size_t) 1, (size_t) lSize, (FILE *)ptr );
-    return (int)ret;
-}
-
-// whence: SEEK_SET, SEEK_CUR, SEEK_END (like fseek) and AVSEEK_SIZE
-int64_t SAM_SeekFunc(void* ptr, int64_t pos, int whence)
-{   
-    if( AVSEEK_SIZE == whence )
+    CustomIOCtx_t *io = (CustomIOCtx_t *)ptr;
+    int ret = 0;
+    
+    if (!io->pMoovFile)
     {
-        return -1;
+        ret = (int)fread( (void *) buffer, (size_t) 1, (size_t) lSize, io->pFile );
     }
-    int ret = fseeko((FILE *)ptr, (off_t)pos, whence);
-    if(0 == ret)
+    else
     {
-        return (off_t)ftello((FILE *)ptr);
+        if (io->iOffset < io->iMoovAtomOffset)
+        {
+            ret = (int)fread( (void *) buffer, (size_t) 1, (size_t) lSize, io->pFile );
+            buffer += ret;
+            lSize -= ret;
+        }
+        
+        if (io->iOffset + ret >= io->iMoovAtomOffset)
+        {
+            if (ret)
+            {
+                if (fseeko(io->pMoovFile, io->iOffset + ret - io->iMoovAtomOffset, SEEK_SET))
+                {
+                    // something goes wrong
+                    ffmpeg_err("fseeko on moov atom file fail \n");
+                    lSize = 0;
+                }
+            }
+            
+            ret += (int)fread( (void *) buffer, (size_t) 1, (size_t) lSize, io->pMoovFile );
+        }
+        
+        io->iOffset += ret;
     }
     return ret;
 }
 
-AVIOContext* container_ffmpeg_get_avio_context(char *filename, size_t avio_ctx_buffer_size)
+// whence: SEEK_SET, SEEK_CUR, SEEK_END (like fseek) and AVSEEK_SIZE
+int64_t SAM_SeekFunc(void *ptr, int64_t pos, int whence)
+{   
+    CustomIOCtx_t *io = (CustomIOCtx_t *)ptr;
+    int64_t ret = -1;
+    if (!io->pMoovFile)
+    {
+        if( AVSEEK_SIZE != whence )
+        {
+            ret = (int64_t)fseeko(io->pFile, (off_t)pos, whence);
+            if(0 == ret)
+            {
+                ret = (int64_t)ftello(io->pFile);
+            }
+        }
+    }
+    else
+    {
+        switch(whence)
+        {
+            case SEEK_SET:
+                ret = pos;
+                break;
+            case SEEK_CUR:
+                ret += pos;
+                break;
+            case SEEK_END:
+                ret = io->iFileSize + pos;
+                break;
+            case AVSEEK_SIZE:
+                return io->iFileSize;
+            default:
+                return -1;
+        }
+        
+        if (ret >= 0 && ret <= io->iFileSize)
+        {
+            if (ret < io->iMoovAtomOffset)
+            {
+                if(!fseeko(io->pFile, (off_t)ret, SEEK_SET))
+                    io->iOffset = ret;
+                else
+                    ret = -1;
+            }
+            else
+            {
+                if(!fseeko(io->pMoovFile, (off_t)(ret - io->iMoovAtomOffset), SEEK_SET))
+                    io->iOffset = ret;
+                else
+                    ret = -1;
+            }
+        }
+        else
+        {
+            ret = -1;
+        }
+    }
+    return ret;
+}
+
+AVIOContext* container_ffmpeg_get_avio_context(CustomIOCtx_t *custom_io, size_t avio_ctx_buffer_size)
 {
-        if(strstr(filename, "file://") == filename)
-        {
-            filename += 7;
-        }
+    if(strstr(custom_io->szFile, "file://") == custom_io->szFile)
+        custom_io->szFile += 7;
+    
+    custom_io->pFile = fopen(custom_io->szFile, "rb");
+    if(NULL == custom_io->pFile)
+    {
+        return NULL;
+    }
+    
+    if (custom_io->szMoovAtomFile && custom_io->szMoovAtomFile[0] != '\0')
+    {
+        if(strstr(custom_io->szMoovAtomFile, "file://") == custom_io->szMoovAtomFile)
+            custom_io->szMoovAtomFile += 7;
         
-        FILE *pFile = fopen(filename, "rb");
-        if(NULL == pFile)
+        custom_io->pMoovFile = fopen(custom_io->szMoovAtomFile, "rb");
+        if(NULL == custom_io->pMoovFile)
         {
+            fclose(custom_io->pFile);
             return NULL;
         }
-        
-        AVIOContext *avio_ctx = NULL;
-        uint8_t *avio_ctx_buffer = NULL;
-        
-        avio_ctx_buffer = av_malloc(avio_ctx_buffer_size);
-        if (!avio_ctx_buffer) 
-        {
-            return NULL;
-        }
-        avio_ctx = avio_alloc_context(avio_ctx_buffer, avio_ctx_buffer_size, 0, pFile, &SAM_ReadFunc, NULL, &SAM_SeekFunc);
-        if (!avio_ctx) 
-        {
-            return NULL;
-        }
-        return avio_ctx;
+    }
+    
+    AVIOContext *avio_ctx = NULL;
+    uint8_t *avio_ctx_buffer = NULL;
+    
+    avio_ctx_buffer = av_malloc(avio_ctx_buffer_size);
+    if (!avio_ctx_buffer) 
+    {
+        return NULL;
+    }
+    avio_ctx = avio_alloc_context(avio_ctx_buffer, avio_ctx_buffer_size, 0, custom_io, &SAM_ReadFunc, NULL, &SAM_SeekFunc);
+    if (!avio_ctx) 
+    {
+        return NULL;
+    }
+    return avio_ctx;
 }
 #endif
 
-int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int32_t AVIdx)
+int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, uint64_t fileSize, char *moovAtomFile, uint64_t moovAtomOffset, int32_t AVIdx)
 {
     int32_t err = 0;
     AVInputFormat *fmt = NULL;
@@ -1383,7 +1485,16 @@ int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int
     if(0 == strstr(filename, "://") || 
        0 == strncmp(filename, "file://", 7))
     {
-        AVIOContext *avio_ctx = container_ffmpeg_get_avio_context(filename, 4096);
+        AVIOContext *avio_ctx = NULL;
+        custom_io_tab[AVIdx] = malloc(sizeof(CustomIOCtx_t));
+        sizeof(custom_io_tab[AVIdx], 0x00, sizeof(CustomIOCtx_t));
+        
+        custom_io_tab[AVIdx]->szFile = filename;
+        custom_io_tab[AVIdx]->iFileSize = fileSize;
+        custom_io_tab[AVIdx]->szMoovAtomFile = moovAtomFile;
+        custom_io_tab[AVIdx]->iMoovAtomOffset = moovAtomOffset;
+        
+        avio_ctx = container_ffmpeg_get_avio_context(custom_io_tab[AVIdx], 4096);
         if(avio_ctx)
         {
             avContextTab[AVIdx]->pb = avio_ctx;
@@ -1391,6 +1502,8 @@ int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, int
         }
         else
         {
+            free(custom_io_tab[AVIdx]);
+            custom_io_tab[AVIdx] = NULL;
             return cERR_CONTAINER_FFMPEG_OPEN;
         }
     }
@@ -1754,17 +1867,19 @@ int32_t container_ffmpeg_init(Context_t *context, PlayFiles_t *playFilesNames)
     // make ffmpeg silen
     //av_log_set_level( AV_LOG_DEBUG );
     av_log_set_callback(ffmpeg_silen_callback);
- 
+    
     context->playback->abortRequested = 0;
-    int32_t res = container_ffmpeg_init_av_context(context, playFilesNames->szFirstFile, 0);
+    int32_t res = container_ffmpeg_init_av_context(context, playFilesNames->szFirstFile, playFilesNames->iFirstFileSize, \
+                                                   playFilesNames->szFirstMoovAtomFile, playFilesNames->iFirstMoovAtomOffset, 0);
     if(0 != res)
     {
         return res;
     }
 
-    if(playFilesNames->szSecondFile)
+    if(playFilesNames->szSecondFile && playFilesNames->szSecondFile[0] != '\0')
     {
-        res = container_ffmpeg_init_av_context(context, playFilesNames->szSecondFile, 1);
+        res = container_ffmpeg_init_av_context(context, playFilesNames->szSecondFile, playFilesNames->iSecondFileSize, \
+                                               playFilesNames->szSecondMoovAtomFile, playFilesNames->iSecondMoovAtomOffset, 1);
     }
     
     if(0 != res)
