@@ -437,6 +437,7 @@ static int ParseParams(int argc,char* argv[], PlayFiles_t *playbackFiles, int *p
             if (optarg[0] != '\0')
             {
                 playbackFiles->szSecondFile = malloc(IPTV_MAX_FILE_PATH);
+                playbackFiles->szSecondFile[0] = '\0';
                 strncpy(playbackFiles->szSecondFile, optarg, IPTV_MAX_FILE_PATH-1);
                 playbackFiles->szSecondFile[IPTV_MAX_FILE_PATH] = '\0';
                 map_inter_file_path(playbackFiles->szSecondFile);
@@ -501,6 +502,7 @@ static int ParseParams(int argc,char* argv[], PlayFiles_t *playbackFiles, int *p
             if (optarg[0] != '\0')
             {
                 playbackFiles->szFirstMoovAtomFile = malloc(IPTV_MAX_FILE_PATH);
+                playbackFiles->szFirstMoovAtomFile[0] = '\0';
                 strncpy(playbackFiles->szFirstMoovAtomFile, optarg, IPTV_MAX_FILE_PATH-1);
                 playbackFiles->szFirstMoovAtomFile[IPTV_MAX_FILE_PATH] = '\0';
                 map_inter_file_path(playbackFiles->szFirstMoovAtomFile);
@@ -516,6 +518,7 @@ static int ParseParams(int argc,char* argv[], PlayFiles_t *playbackFiles, int *p
     {
         ret = 0;
         playbackFiles->szFirstFile = malloc(IPTV_MAX_FILE_PATH);
+        playbackFiles->szFirstFile[0] = '\0';
         if(NULL == strstr(argv[optind], "://"))
         {
             strcpy(playbackFiles->szFirstFile, "file://");
@@ -547,7 +550,7 @@ int main(int argc, char* argv[])
     memset(argvBuff, '\0', sizeof(argvBuff));
     int commandRetVal = -1;
     /* inform client that we can handle additional commands */
-    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 46);
+    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 47);
 
     PlayFiles_t playbackFiles;
     memset(&playbackFiles, 0x00, sizeof(playbackFiles));

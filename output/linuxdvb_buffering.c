@@ -33,6 +33,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <time.h>
 
 #include "common.h"
 #include "misc.h"
@@ -294,8 +295,13 @@ int32_t LinuxDvbBuffClose(Context_t *context)
         pthread_cond_signal(&bufferingdDataAddedCond);
         
         /* wait for thread end */
+#if 0
+        /* This code couse symbol versioning of clock_gettime@GLIBC_2.17 */
         clock_gettime(CLOCK_REALTIME, &max_wait);
         max_wait.tv_sec += 1;
+#else
+        max_wait.tv_sec = time(NULL) + 2;
+#endif
         pthread_cond_timedwait(&bufferingExitCond, &bufferingMtx, &max_wait);
         pthread_mutex_unlock(&bufferingMtx);
 
