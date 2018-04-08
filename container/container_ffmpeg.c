@@ -410,7 +410,6 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
     case AV_CODEC_ID_WMAV1:
     case AV_CODEC_ID_WMAV2:
             return (wma_software_decode) ? "A_IPCM" : "A_WMA";
-    case 86056:
     case AV_CODEC_ID_WMAPRO:
         return (wma_software_decode) ? "A_IPCM" : "A_WMA/PRO";
     case AV_CODEC_ID_WMALOSSLESS:
