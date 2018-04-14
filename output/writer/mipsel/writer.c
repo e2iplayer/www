@@ -98,13 +98,7 @@ static Writer_t * AvailableWriter[] = {
 /* ***************************** */
 /*  Functions                    */
 /* ***************************** */
-static void FlusPipe(int pipefd)
-{
-    char tmp;
-    while(1 == read(pipefd, &tmp, 1));
-}
-
-ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, const void *buf, size_t size)
+ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, const void *buf, int size)
 {
     fd_set rfds;
     fd_set wfds;
@@ -191,14 +185,13 @@ ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, const void *buf, 
     return 0;
 }
 
-ssize_t write_with_retry(int fd, const void *buf, size_t size)
+ssize_t write_with_retry(int fd, const void *buf, int size)
 {
     ssize_t ret;
     int retval = 0;
     while(size > 0 && 0 == PlaybackDieNow(0))
     {
         ret = write(fd, buf, size);
-        //printf("[%d] write [%lld]\n", fd, ret);
         if (ret < 0)
         {
             switch(errno)
@@ -236,7 +229,7 @@ ssize_t write_with_retry(int fd, const void *buf, size_t size)
     return 0;
 }
 
-ssize_t writev_with_retry(int fd, const struct iovec *iov, size_t ic) 
+ssize_t writev_with_retry(int fd, const struct iovec *iov, int ic) 
 {
     ssize_t len = 0;
     int i = 0;

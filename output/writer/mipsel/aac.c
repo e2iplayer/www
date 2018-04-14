@@ -328,8 +328,8 @@ static int writeDataLATM(void *_call)
     int ret = latmenc_decode_extradata(pLATMCtx, call->private_data, call->private_size);
     if (ret)
     {
-        printf("%02x %02x %02x %02x %02x %02x %02x %02x\n", (int)call->data[0], (int)call->data[1], (int)call->data[2], (int)call->data[3],\
-                                                            (int)call->data[4], (int)call->data[5], (int)call->data[6], (int)call->data[7]);
+        //printf("%02x %02x %02x %02x %02x %02x %02x %02x\n", (int)call->data[0], (int)call->data[1], (int)call->data[2], (int)call->data[3],\
+        //                             (int)call->data[4], (int)call->data[5], (int)call->data[6], (int)call->data[7]);
         aac_err("latm_decode_extradata failed. ignoring...\n");
         return 0;
     }

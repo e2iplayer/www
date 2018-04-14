@@ -99,7 +99,6 @@ const  uint8_t   Head[] = {0, 0, 0, 1};
 static int32_t   initialHeader = 1;
 static uint32_t  NalLengthBytes = 1;
 static int       avc3 = 0;
-static int       sps_pps_in_stream = 0;
 /* ***************************** */
 /* Prototypes                    */
 /* ***************************** */
@@ -258,23 +257,12 @@ static int32_t writeData(void* _call)
         (call->len > 3) && ((call->data[0] == 0x00 && call->data[1] == 0x00 && call->data[2] == 0x00 && call->data[3] == 0x01) ||
         (call->data[0] == 0xff && call->data[1] == 0xff && call->data[2] == 0xff && call->data[3] == 0xff))))
     {
-        uint32_t i = 0;
-        uint8_t InsertPrivData = !sps_pps_in_stream;
         uint32_t PacketLength = 0;
-        uint32_t FakeStartCode = PES_VERSION_FAKE_START_CODE;
+        uint32_t FakeStartCode = /*(call->Version << 8) | */PES_VERSION_FAKE_START_CODE;
+        
         iov[ic++].iov_base = PesHeader;
-        
-        while (InsertPrivData && i < 36 && (call->len - i) > 5)
-        {
-            if ( (call->data[i] == 0x00 && call->data[i+1] == 0x00 && call->data[i+2] == 0x00 && call->data[i+3] == 0x01 && (call->data[i+4] == 0x67 || call->data[i+4] == 0x68)) )
-            {
-                InsertPrivData = 0;
-                sps_pps_in_stream = 1;
-            }
-            i += 1;
-        }
-        
-        if (InsertPrivData && call->private_size > 0 /*&& initialHeader*/) // some rtsp streams can update codec data at runtime
+        initialHeader = 0;
+        if (initialHeader) 
         {
             initialHeader = 0;
             iov[ic].iov_base  = call->private_data;
@@ -296,7 +284,7 @@ static int32_t writeData(void* _call)
         iov[ic++].iov_len = 1;
         
         iov[0].iov_len = InsertPesHeader(PesHeader, -1, MPEG_VIDEO_PES_START_CODE, VideoPts, FakeStartCode);
-        int ret = writev(call->fd, iov, ic);
+        int ret = call->WriteV(call->fd, iov, ic);
         return ret;
     }
     else if( !call->private_data || call->private_size < 7 || 1 != call->private_data[0])
@@ -305,7 +293,7 @@ static int32_t writeData(void* _call)
          return 0;
     }
 
-    if (!avc3)
+    if (initialHeader)
     {
         uint8_t  *private_data = call->private_data;
         uint32_t  private_size = call->private_size;
@@ -363,7 +351,7 @@ static int32_t writeData(void* _call)
         iov[ic++].iov_len = InsertPesHeader (PesHeader, ParametersLength, MPEG_VIDEO_PES_START_CODE, INVALID_PTS_VALUE, 0);
         iov[ic].iov_base = HeaderData;
         iov[ic++].iov_len = ParametersLength;
-        len = writev(call->fd, iov, ic);
+        len = call->WriteV(call->fd, iov, ic);
         if (len < 0)
         {
             return len;
@@ -419,7 +407,7 @@ static int32_t writeData(void* _call)
         }
 
         iov[0].iov_len = InsertPesHeader (PesHeader, InitialHeaderLength, MPEG_VIDEO_PES_START_CODE, INVALID_PTS_VALUE, 0);
-        ssize_t l = writev(call->fd, iov, ic);
+        ssize_t l = call->WriteV(call->fd, iov, ic);
         
         if (private_data != call->private_data)
         {
@@ -484,7 +472,7 @@ static int32_t writeData(void* _call)
             h264_printf (20, "  pts=%llu\n", VideoPts);
 
             iov[0].iov_len = InsertPesHeader (PesHeader, NalLength, MPEG_VIDEO_PES_START_CODE, VideoPts, 0);
-            ssize_t l = writev(call->fd, iov, ic);
+            ssize_t l = call->WriteV(call->fd, iov, ic);
             if (l < 0)
                 return l;
             len += l;

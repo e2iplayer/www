@@ -159,7 +159,7 @@ static int32_t writeData(void* _call)
     iov[1].iov_base = Data;
     iov[1].iov_len = Size;
 
-    int32_t len = writev(call->fd, iov, 2);
+    int32_t len = call->WriteV(call->fd, iov, 2);
     dts_printf(10, "< len %d\n", len);
     return len;
 }

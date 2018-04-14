@@ -139,7 +139,7 @@ static int writeData(void* _call)
     iov[0].iov_len = HeaderLength;
     iov[1].iov_base = call->data;
     iov[1].iov_len = call->len;
-    len = writev(call->fd, iov, 2);
+    len = call->WriteV(call->fd, iov, 2);
 
     h263_printf(10, "< len %d\n", len);
     return len;

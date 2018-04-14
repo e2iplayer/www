@@ -210,7 +210,7 @@ static int _writeData(void *_call, int type)
     iov[0].iov_len = HeaderLength;
     iov[1].iov_base = call->data;
     iov[1].iov_len = call->len;
-    return writev(call->fd, iov, 2);
+    return call->WriteV(call->fd, iov, 2);
 }
 
 static int writeDataADTS(void *_call)
@@ -278,7 +278,7 @@ static int writeDataADTS(void *_call)
     iov[1].iov_base = call->data;
     iov[1].iov_len = call->len;
     
-    return writev(call->fd, iov, 2);
+    return call->WriteV(call->fd, iov, 2);
 }
 
 static int writeDataLATM(void *_call)
@@ -324,8 +324,8 @@ static int writeDataLATM(void *_call)
     int ret = latmenc_decode_extradata(pLATMCtx, call->private_data, call->private_size);
     if (ret)
     {
-        printf("%02x %02x %02x %02x %02x %02x %02x %02x\n", (int)call->data[0], (int)call->data[1], (int)call->data[2], (int)call->data[3],\
-                                                            (int)call->data[4], (int)call->data[5], (int)call->data[6], (int)call->data[7]);
+        //printf("%02x %02x %02x %02x %02x %02x %02x %02x\n", (int)call->data[0], (int)call->data[1], (int)call->data[2], (int)call->data[3],\
+        //                                                    (int)call->data[4], (int)call->data[5], (int)call->data[6], (int)call->data[7]);
         aac_err("latm_decode_extradata failed. ignoring...\n");
         return 0;
     }
@@ -348,7 +348,7 @@ static int writeDataLATM(void *_call)
     iov[2].iov_base = pLATMCtx->buffer;
     iov[2].iov_len  = pLATMCtx->len;
     
-    return writev(call->fd, iov, 3);
+    return call->WriteV(call->fd, iov, 3);
 }
 
 /* ***************************** */

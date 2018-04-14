@@ -304,9 +304,10 @@ static int PlaybackPause(Context_t  *context)
     {
         set_pause_timeout(1);
         
+        context->playback->isPaused     = 1;
+        
         context->output->Command(context, OUTPUT_PAUSE, NULL);
 
-        context->playback->isPaused     = 1;
         //context->playback->isPlaying  = 1;
         context->playback->isForwarding = 0;
         context->playback->BackWard     = 0;

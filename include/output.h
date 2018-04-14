@@ -27,6 +27,7 @@ typedef enum {
     OUTPUT_GET_FRAME_COUNT,
     OUTPUT_GET_PROGRESSIVE,
     OUTPUT_SET_BUFFER_SIZE,
+    OUTPUT_GET_BUFFER_SIZE,
 } OutputCmd_t;
 
 typedef struct

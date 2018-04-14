@@ -101,8 +101,9 @@ int32_t LinuxDvbBuffClose(Context_t *context);
 int32_t LinuxDvbBuffFlush(Context_t *context);
 int32_t LinuxDvbBuffResume(Context_t *context);
 
-ssize_t BufferingWriteV(int fd, const struct iovec *iov, size_t ic);
-int32_t WriteSetBufferingSize(const uint32_t bufferSize);
+ssize_t BufferingWriteV(int fd, const struct iovec *iov, int ic);
+int32_t LinuxDvbBuffSetSize(const uint32_t bufferSize);
+uint32_t LinuxDvbBuffGetSize();
 
 int LinuxDvbStop(Context_t  *context, char * type);
 
@@ -1003,10 +1004,15 @@ static int Command(void  *_context, OutputCmd_t command, void * argument) {
             ret = cERR_LINUXDVB_NO_ERROR;
             if (bufferSize > 0)
             {
-                WriteSetBufferingSize(bufferSize);
+                LinuxDvbBuffSetSize(bufferSize);
                 isBufferedOutput = true;
             }
         }
+        break;
+    }
+    case OUTPUT_GET_BUFFER_SIZE: {
+        ret = cERR_LINUXDVB_NO_ERROR;
+        *((uint32_t*)argument) = LinuxDvbBuffGetSize();
         break;
     }
     default:

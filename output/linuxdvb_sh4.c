@@ -37,6 +37,7 @@
 #include <pthread.h>
 #include <errno.h>
 #include <poll.h>
+#include <sys/uio.h>
 
 #include "bcm_ioctls.h"
 
@@ -89,12 +90,22 @@ struct DVBApiVideoInfo_s
 static struct DVBApiVideoInfo_s videoInfo = {-1,-1,-1,-1,-1};
 
 unsigned long long int sCURRENT_PTS = 0;
+bool isBufferedOutput = false;
 
 pthread_mutex_t LinuxDVBmutex;
 
 /* ***************************** */
 /* Prototypes                    */
 /* ***************************** */
+int32_t LinuxDvbBuffOpen(Context_t *context, char *type, int outfd);
+int32_t LinuxDvbBuffClose(Context_t *context);
+int32_t LinuxDvbBuffFlush(Context_t *context);
+int32_t LinuxDvbBuffResume(Context_t *context);
+
+ssize_t BufferingWriteV(int fd, const struct iovec *iov, int ic);
+int32_t LinuxDvbBuffSetSize(const uint32_t bufferSize);
+uint32_t LinuxDvbBuffGetSize();
+
 int LinuxDvbStop(Context_t  *context, char * type);
 
 /* ***************************** */
@@ -123,9 +134,10 @@ int LinuxDvbOpen(Context_t  *context __attribute__((unused)), char * type) {
 
     linuxdvb_printf(10, "v%d a%d\n", video, audio);
 
-    if (video && videofd < 0) {
+    if (video && videofd < 0)
+    {
+    
         videofd = open(VIDEODEV, O_RDWR);
-
         if (videofd < 0)
         {
             linuxdvb_err("failed to open %s - errno %d\n", VIDEODEV, errno);
@@ -157,10 +169,12 @@ int LinuxDvbOpen(Context_t  *context __attribute__((unused)), char * type) {
             linuxdvb_err("VIDEO_SET_SPEED: %s\n", strerror(errno));
         }
 
+        if (isBufferedOutput)
+            LinuxDvbBuffOpen(context, type, videofd);
     }
-    if (audio && audiofd < 0) {
+    if (audio && audiofd < 0)
+    {
         audiofd = open(AUDIODEV, O_RDWR);
-
         if (audiofd < 0)
         {
             linuxdvb_err("failed to open %s - errno %d\n", AUDIODEV, errno);
@@ -188,14 +202,18 @@ int LinuxDvbOpen(Context_t  *context __attribute__((unused)), char * type) {
             linuxdvb_err("ioctl failed with errno %d\n", errno);
             linuxdvb_err("AUDIO_SET_STREAMTYPE: %s\n", strerror(errno));
         }
+        
+        if (isBufferedOutput)
+            LinuxDvbBuffOpen(context, type, audiofd);
     }
 
     return cERR_LINUXDVB_NO_ERROR;
 }
 
-int LinuxDvbClose(Context_t  *context, char * type) {
-    unsigned char video = !strcmp("video", type);
-    unsigned char audio = !strcmp("audio", type);
+int LinuxDvbClose(Context_t  *context, char * type) 
+{
+    uint8_t video = !strcmp("video", type);
+    uint8_t audio = !strcmp("audio", type);
 
     linuxdvb_printf(10, "v%d a%d\n", video, audio);
 
@@ -206,6 +224,9 @@ int LinuxDvbClose(Context_t  *context, char * type) {
     LinuxDvbStop(context, type);
 
     getLinuxDVBMutex(FILENAME, __FUNCTION__,__LINE__);
+
+    if (isBufferedOutput)
+        LinuxDvbBuffClose(context);
 
     if (video && videofd != -1)
     {
@@ -416,6 +437,9 @@ int LinuxDvbContinue(Context_t  *context __attribute__((unused)), char * type) {
             ret = cERR_LINUXDVB_ERROR;
         }
     }
+    
+    if (isBufferedOutput)
+        LinuxDvbBuffResume(context);
 
     linuxdvb_printf(10, "exiting\n");
 
@@ -1006,6 +1030,7 @@ static int Write(void  *_context, void* _out)
             call.Height       = out->height;
             call.InfoFlags      = out->infoFlags;
             call.Version      = 0; // is unsingned char
+            call.WriteV       = isBufferedOutput ? BufferingWriteV : writev;
 
             if (writer->writeData)
             {
@@ -1055,7 +1080,8 @@ static int Write(void  *_context, void* _out)
             call.FrameScale     = out->timeScale;
             call.InfoFlags      = out->infoFlags;
             call.Version        = 0; /* -1; unsigned char cannot be negative */
-
+            call.WriteV         = isBufferedOutput ? BufferingWriteV : writev;
+            
             if (writer->writeData)
             {
                 res = writer->writeData(&call);
@@ -1110,6 +1136,9 @@ static int reset(Context_t  *context)
     }
 
     free(Encoding);
+    
+    if (isBufferedOutput)
+        LinuxDvbBuffFlush(context);
 
     return ret;
 }
@@ -1205,6 +1234,25 @@ static int Command(void  *_context, OutputCmd_t command, void * argument) {
     case OUTPUT_GET_PROGRESSIVE: {
         ret = cERR_LINUXDVB_NO_ERROR;
         *((int*)argument) = videoInfo.progressive;
+        break;
+    }
+    case OUTPUT_SET_BUFFER_SIZE: {
+        ret = cERR_LINUXDVB_ERROR;
+        if (!isBufferedOutput)
+        {
+            uint32_t bufferSize = *((uint32_t*)argument);
+            ret = cERR_LINUXDVB_NO_ERROR;
+            if (bufferSize > 0)
+            {
+                LinuxDvbBuffSetSize(bufferSize);
+                isBufferedOutput = true;
+            }
+        }
+        break;
+    }
+    case OUTPUT_GET_BUFFER_SIZE: {
+        ret = cERR_LINUXDVB_NO_ERROR;
+        *((uint32_t*)argument) = LinuxDvbBuffGetSize();
         break;
     }
     default:

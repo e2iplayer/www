@@ -141,7 +141,7 @@ static int writeData(void* _call)
         iov[0].iov_len = InsertPesHeader (PesHeader, call->private_size, MPEG_AUDIO_PES_START_CODE, 0, 0);
         iov[1].iov_base = call->private_data;
         iov[1].iov_len = call->private_size;
-        len = writev(call->fd, iov, 2);
+        len = call->WriteV(call->fd, iov, 2);
         initialHeader = 0;
     }
 
@@ -154,7 +154,7 @@ static int writeData(void* _call)
         iov[1].iov_base = call->data;
         iov[1].iov_len = call->len;
 
-        ssize_t l = writev(call->fd, iov, 2);
+        ssize_t l = call->WriteV(call->fd, iov, 2);
         len = (l > -1) ? len + l : l;
     }
 

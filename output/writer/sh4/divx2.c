@@ -207,7 +207,7 @@ static int writeData(void* _call)
     iov[ic].iov_base = call->data;
     iov[ic++].iov_len = call->len;
 
-    int len = writev(call->fd, iov, ic);
+    int len = call->WriteV(call->fd, iov, ic);
 
     divx_printf(10, "xvid_Write < len=%d\n", len);
 

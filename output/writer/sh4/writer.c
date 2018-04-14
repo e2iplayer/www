@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "misc.h"
 #include "writer.h"
 
 /* ***************************** */
@@ -95,6 +96,54 @@ static Writer_t * AvailableWriter[] = {
 /* ***************************** */
 /*  Functions                    */
 /* ***************************** */
+ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, const void *buf, int size)
+{
+    fd_set rfds;
+    
+    ssize_t ret;
+    int retval = -1;
+    struct timeval tv;
+    
+    while(size > 0 && 0 == PlaybackDieNow(0) && !context->playback->isSeeking)
+    {
+        if (context->playback->isPaused)
+        {
+            FD_ZERO(&rfds);
+            FD_SET(pipefd, &rfds);
+            
+            tv.tv_sec = 0;
+            tv.tv_usec = 500000; // 500ms
+        
+            retval = select(pipefd + 1, &rfds, NULL, NULL, &tv);
+            if (retval < 0)
+            {
+                break;
+            }
+        
+            if (retval == 0)
+            {
+                //printf("RETURN FROM SELECT DUE TO TIMEOUT TIMEOUT\n");
+                continue;
+            }
+            
+            if(FD_ISSET(pipefd, &rfds))
+            {
+                FlusPipe(pipefd);
+                //printf("RETURN FROM SELECT DUE TO pipefd SET\n");
+                continue;
+            }
+        }
+        
+        //printf(">> Before Write fd [%d]\n", fd);
+        ret = write(fd, buf, size);
+        //printf(">> After Write ret[%d] size[%d]\n", (int)ret, size);
+        if (ret == size)
+            ret = 0; // no error
+        
+        break;
+    }
+    return ret;
+}
 
 Writer_t* getWriter(char* encoding)
 {

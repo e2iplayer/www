@@ -122,7 +122,7 @@ static void LinuxDvbBuffThread(Context_t *context)
     int flags = 0;
     static BufferingNode_t *nodePtr = NULL;
     buff_printf(20, "ENTER\n");
-    
+
     if (pipe(g_pfd) == -1)
         buff_err("critical error\n");
     
@@ -142,7 +142,7 @@ static void LinuxDvbBuffThread(Context_t *context)
     flags |= O_NONBLOCK;
     if (fcntl(g_pfd[1], F_SETFL, flags) == -1)
         buff_err("critical error\n");
-    
+
     PlaybackDieNowRegisterCallback(WriteWakeUp);
     
     while (0 == PlaybackDieNow(0))
@@ -209,16 +209,22 @@ static void LinuxDvbBuffThread(Context_t *context)
     
     buff_printf(20, "EXIT\n");
     hasBufferingThreadStarted = false;
+    
     close(g_pfd[0]);
     close(g_pfd[1]);
     g_pfd[0] = -1;
     g_pfd[1] = -1;
 }
 
-int32_t WriteSetBufferingSize(const uint32_t bufferSize)
+int32_t LinuxDvbBuffSetSize(const uint32_t bufferSize)
 {
     maxBufferingDataSize = bufferSize;
     return cERR_LINUX_DVB_BUFFERING_NO_ERROR;
+}
+
+uint32_t LinuxDvbBuffGetSize()
+{
+    return maxBufferingDataSize;
 }
 
 int32_t LinuxDvbBuffOpen(Context_t *context, char *type, int outfd)
@@ -365,7 +371,7 @@ int32_t LinuxDvbBuffResume(Context_t *context)
     return 0;
 }
 
-ssize_t BufferingWriteV(int fd, const struct iovec *iov, size_t ic) 
+ssize_t BufferingWriteV(int fd, const struct iovec *iov, int ic) 
 {
     OutputType_t dataType = OUTPUT_UNK;
     BufferingNode_t *nodePtr = NULL;

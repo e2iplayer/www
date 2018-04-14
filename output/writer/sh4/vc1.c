@@ -200,14 +200,14 @@ static int writeData(void* _call)
         iov[1].iov_base = PesPayload;
         iov[1].iov_len = PesPtr - PesPayload;
         iov[0].iov_len = InsertPesHeader (PesHeader, iov[1].iov_len, VC1_VIDEO_PES_START_CODE, INVALID_PTS_VALUE, 0);
-        len = writev(call->fd, iov, 2);
+        len = call->WriteV(call->fd, iov, 2);
 
         /* For VC1 the codec private data is a standard vc1 sequence header so we just copy it to the output */
         iov[0].iov_base = PesHeader;
         iov[1].iov_base = call->private_data;
         iov[1].iov_len = call->private_size;
         iov[0].iov_len = InsertPesHeader (PesHeader, iov[1].iov_len, VC1_VIDEO_PES_START_CODE, INVALID_PTS_VALUE, 0);
-        len = writev(call->fd, iov, 2);
+        len = call->WriteV(call->fd, iov, 2);
 
         initialHeader = 0;
     }
@@ -253,7 +253,7 @@ static int writeData(void* _call)
             iov[1].iov_base = call->data + Position;
             iov[1].iov_len = PacketLength;
 
-            ssize_t l = writev(call->fd, iov, 2);
+            ssize_t l = call->WriteV(call->fd, iov, 2);
             if (l < 0) 
             {
                 len = l;

@@ -323,7 +323,7 @@ static int32_t writeData(void *_call)
         lpcm_prv[1] = ((lpcm_prv[1]+SubFramesPerPES) & 0x1F);
 
         iov[0].iov_len = InsertPesHeader (PesHeader, iov[1].iov_len + iov[2].iov_len, PCM_PES_START_CODE, call->Pts, 0);
-        int32_t len = writev(call->fd, iov, 3);
+        int32_t len = call->WriteV(call->fd, iov, 3);
         if (len < 0)
         {
             break;

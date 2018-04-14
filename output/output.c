@@ -564,6 +564,25 @@ static int Command(void  *_context, OutputCmd_t command, void * argument)
         }
         break;
     }
+    case OUTPUT_GET_BUFFER_SIZE:
+    {
+        if (context && context->playback)
+        {
+            if (context->output->video)
+            {
+                return context->output->video->Command(context, OUTPUT_GET_BUFFER_SIZE, argument);
+            }
+            else if (context->output->audio)
+            {
+                return context->output->audio->Command(context, OUTPUT_GET_BUFFER_SIZE, argument);
+            }
+        }
+        else
+        {
+            ret = cERR_OUTPUT_INTERNAL_ERROR;
+        }
+        break;
+    }
     default:
         output_err("%s::%s OutputCmd %d not supported!\n", FILENAME, __FUNCTION__, command);
         ret = cERR_OUTPUT_INTERNAL_ERROR;

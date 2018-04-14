@@ -550,7 +550,7 @@ int main(int argc, char* argv[])
     memset(argvBuff, '\0', sizeof(argvBuff));
     int commandRetVal = -1;
     /* inform client that we can handle additional commands */
-    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 47);
+    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 49);
 
     PlayFiles_t playbackFiles;
     memset(&playbackFiles, 0x00, sizeof(playbackFiles));
@@ -645,7 +645,6 @@ int main(int argc, char* argv[])
     if (linuxDvbBufferSizeMB)
         g_player->output->Command(g_player, OUTPUT_SET_BUFFER_SIZE, &linuxDvbBufferSizeMB);
     
-
     g_player->manager->video->Command(g_player, MANAGER_REGISTER_UPDATED_TRACK_INFO, UpdateVideoTrack);
     if (strncmp(playbackFiles.szFirstFile, "rtmp", 4) && strncmp(playbackFiles.szFirstFile, "ffrtmp", 4))
     {

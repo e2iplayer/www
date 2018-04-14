@@ -592,10 +592,16 @@ static void FFMPEGThread(Context_t *context)
     ffmpeg_printf(10, "\n");
     while ( context->playback->isCreationPhase )
     {
-        ffmpeg_err("Thread waiting for end of init phase...\n");
+        ffmpeg_printf(10, "Thread waiting for end of init phase...\n");
         usleep(1000);
     }
     ffmpeg_printf(10, "Running!\n");
+    
+#ifdef __sh__
+    uint32_t bufferSize = 0;
+    context->output->Command(context, OUTPUT_GET_BUFFER_SIZE, &bufferSize);
+    ffmpeg_printf(10, "bufferSize [%u]\n", bufferSize);
+#endif
 
     int8_t isWaitingForFinish = 0;
     while ( context && context->playback && context->playback->isPlaying ) 
@@ -609,7 +615,7 @@ static void FFMPEGThread(Context_t *context)
          */
 #ifdef __sh__
         //IF MOVIE IS PAUSED, WAIT
-        if (context->playback->isPaused) 
+        if (0 == bufferSize && context->playback->isPaused) 
         {
             ffmpeg_printf(20, "paused\n");
             reset_finish_timeout();

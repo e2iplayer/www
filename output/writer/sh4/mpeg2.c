@@ -138,7 +138,7 @@ static int writeData(void* _call)
         iov[1].iov_base = call->data + Position;
         iov[1].iov_len = PacketLength;
 
-        ssize_t l = writev(call->fd, iov, 2);
+        ssize_t l = call->WriteV(call->fd, iov, 2);
         if (l < 0) 
         {
             len = l;
