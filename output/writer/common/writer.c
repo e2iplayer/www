@@ -67,7 +67,7 @@ if (debug_level >= level) printf(x); } while (0)
 /* ***************************** */
 /*  Functions                    */
 /* ***************************** */
-void FlusPipe(int pipefd)
+void FlushPipe(int pipefd)
 {
     char tmp;
     while(1 == read(pipefd, &tmp, 1));

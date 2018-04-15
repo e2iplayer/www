@@ -90,5 +90,5 @@ ssize_t write_with_retry(int fd, const void *buf, int size);
 ssize_t writev_with_retry(int fd, const struct iovec *iov, int ic);
 
 ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, const void *buf, int size);
-void FlusPipe(int pipefd);
+void FlushPipe(int pipefd);
 #endif

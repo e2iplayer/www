@@ -116,13 +116,14 @@ ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, const void *buf, 
         FD_SET(pipefd, &rfds);
         FD_SET(fd, &wfds);
 
-        /* When we PAUSE LINUX DVB outputs buffers then audio/video buffers 
-         * will be filled to full unfortunately, in such case after resume 
-         * select never return with fd set - bug in DVB drivers?
-         * So, there will be to workarounds:
-         *   1. write to pipe pipe at resume to exit select immediately
-         *   2. even if fd is not set exit from select after 0,1s 
-         *      (it seems that second workaround is not needed)
+        /* When we PAUSE LINUX DVB outputs buffers, then audio/video buffers 
+         * will continue to be filled. Unfortunately, in such case after resume 
+         * select() will never return with fd set - bug in DVB drivers?
+         * There are to workarounds possible:
+         *   1. write to pipe at resume to return from select() immediately
+         *   2. make timeout select(), limit max time spend in the select()
+         *      to for example 0,1s 
+         *   (at now first workaround is used)
          */
         //tv.tv_sec = 0;
         //tv.tv_usec = 100000; // 100ms
@@ -135,13 +136,13 @@ ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, const void *buf, 
         
         //if (retval == 0)
         //{
-        //    //printf("RETURN FROM SELECT DUE TO TIMEOUT TIMEOUT\n");
+        //    //printf("RETURN FROM SELECT DUE TO TIMEOUT\n");
         //    continue;
         //}
         
         if(FD_ISSET(pipefd, &rfds))
         {
-            FlusPipe(pipefd);
+            FlushPipe(pipefd);
             //printf("RETURN FROM SELECT DUE TO pipefd SET\n");
             continue;
         }
@@ -169,12 +170,13 @@ ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, const void *buf, 
             }
             else if (ret == 0)
             {
-                //printf("This should not happen. Select return fd ready to write, but write return 0, errno [%d]\n", errno);
+                // printf("This should not happen. Select return fd ready to write, but write return 0, errno [%d]\n", errno);
+                // wait 10ms before next try
                 tv.tv_sec = 0;
                 tv.tv_usec = 10000; // 10ms
                 retval = select(pipefd + 1, &rfds, NULL, NULL, &tv);
                 if (retval)
-                    FlusPipe(pipefd);
+                    FlushPipe(pipefd);
                 continue;
             }
             
