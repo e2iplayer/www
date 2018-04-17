@@ -128,7 +128,7 @@ ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, const void *buf, 
             
             if(FD_ISSET(pipefd, &rfds))
             {
-                FlusPipe(pipefd);
+                FlushPipe(pipefd);
                 //printf("RETURN FROM SELECT DUE TO pipefd SET\n");
                 continue;
             }
