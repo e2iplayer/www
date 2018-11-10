@@ -10,10 +10,10 @@ RDEPENDS_${PN} = "ffmpeg"
 inherit gitpkgv
 
 SRCREV = "${AUTOREV}"
-PV = "49+gitr${SRCPV}"
-PKGV = "49+gitr${GITPKGV}"
+PV = "50+gitr${SRCPV}"
+PKGV = "50+gitr${GITPKGV}"
 
-SRC_URI = "git://github.com/samsamsam-iptvplayer/exteplayer3.git;branch=master"
+SRC_URI = "git://github.com/e2iplayer/exteplayer3.git;branch=master"
 
 S = "${WORKDIR}/git/"
 
@@ -83,4 +83,3 @@ do_install() {
     install -d ${D}${bindir}
     install -m 0755 ${S}/exteplayer3 ${D}${bindir}
 }
-
