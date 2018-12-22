@@ -55,30 +55,6 @@
 #define VC1_SEQUENCE_LAYER_METADATA_START_CODE  0x80
 #define VC1_FRAME_START_CODE 0x0d
 
-#define SAM_WITH_DEBUG
-#ifdef SAM_WITH_DEBUG
-#define VC1_DEBUG
-#else
-#define VC1_SILENT
-#endif
-
-#ifdef VC1_DEBUG
-
-static short debug_level = 10;
-
-#define vc1_printf(level, fmt, x...) do { \
-if (debug_level >= level) printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define vc1_printf(level, fmt, x...)
-#endif
-
-#ifndef VC1_SILENT
-#define vc1_err(fmt, x...) do { printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define vc1_err(fmt, x...)
-#endif
-
-
 /* ***************************** */
 /* Types                         */
 /* ***************************** */

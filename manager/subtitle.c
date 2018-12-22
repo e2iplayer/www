@@ -26,35 +26,12 @@
 
 #include "manager.h"
 #include "common.h"
+#include "debug.h"
 
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
 #define TRACKWRAP 20
-
-//#define SAM_WITH_DEBUG
-#ifdef SAM_WITH_DEBUG
-#define SUBTITLE_MGR_DEBUG
-#else
-#define SUBTITLE_MGR_SILENT
-#endif
-
-
-#ifdef SUBTITLE_MGR_DEBUG
-
-static short debug_level = 10;
-
-#define subtitle_mgr_printf(level, x...) do { \
-if (debug_level >= level) printf(x); } while (0)
-#else
-#define subtitle_mgr_printf(level, x...)
-#endif
-
-#ifndef SUBTITLE_MGR_SILENT
-#define subtitle_mgr_err(x...) do { printf(x); } while (0)
-#else
-#define subtitle_mgr_err(x...)
-#endif
 
 /* Error Constants */
 #define cERR_SUBTITLE_MGR_NO_ERROR        0

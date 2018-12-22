@@ -42,6 +42,7 @@
 #include "stm_ioctls.h"
 #include "bcm_ioctls.h"
 
+#include "debug.h"
 #include "common.h"
 #include "output.h"
 #include "debug.h"
@@ -54,29 +55,6 @@
 /* ***************************** */
 #define B_GET_BITS(w,e,b)  (((w)>>(b))&(((unsigned)(-1))>>((sizeof(unsigned))*8-(e+1-b))))
 #define B_SET_BITS(name,v,e,b)  (((unsigned)(v))<<(b))
-
-
-#ifdef SAM_WITH_DEBUG
-#define DIVX_DEBUG
-#else
-#define DIVX_SILENT
-#endif
-
-#ifdef DIVX_DEBUG
-
-static short debug_level = 0;
-
-#define divx_printf(level, fmt, x...) do { \
-if (debug_level >= level) printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define divx_printf(level, fmt, x...)
-#endif
-
-#ifndef DIVX_SILENT
-#define divx_err(fmt, x...) do { printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define divx_err(fmt, x...)
-#endif
 
 /* ***************************** */
 /* Types                         */

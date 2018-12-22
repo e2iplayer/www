@@ -26,18 +26,11 @@
 #include <ffmpeg/put_bits.h>
 #include <ffmpeg/mpeg4audio.h>
 #include <ffmpeg/latmenc.h>
+#include "debug.h"
 
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
-//#define LATMENC_SILENT
-
-#ifndef LATMENC_SILENT
-#define latmenc_err(fmt, x...) do { printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define latmenc_err(fmt, x...)
-#endif
-
 
 int latmenc_decode_extradata(LATMContext *ctx, uint8_t *buf, int size)
 {

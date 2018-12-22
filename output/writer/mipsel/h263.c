@@ -42,6 +42,7 @@
 #include "stm_ioctls.h"
 #include "bcm_ioctls.h"
 
+#include "debug.h"
 #include "common.h"
 #include "output.h"
 #include "debug.h"
@@ -52,23 +53,7 @@
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
-//#define H263_DEBUG
 
-#ifdef H263_DEBUG
-
-static short debug_level = 0;
-
-#define h263_printf(level, fmt, x...) do { \
-if (debug_level >= level) printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define h263_printf(level, fmt, x...)
-#endif
-
-#ifndef H263_SILENT
-#define h263_err(fmt, x...) do { printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define h263_err(fmt, x...)
-#endif
 /* ***************************** */
 /* Types                         */
 /* ***************************** */

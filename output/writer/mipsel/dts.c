@@ -42,6 +42,7 @@
 #include "stm_ioctls.h"
 #include "bcm_ioctls.h"
 
+#include "debug.h"
 #include "common.h"
 #include "output.h"
 #include "debug.h"
@@ -56,28 +57,6 @@
 #define PES_AUDIO_HEADER_SIZE           (32 + PES_AUDIO_PRIVATE_HEADER_SIZE)
 #define PES_AUDIO_PACKET_SIZE           2028
 #define SPDIF_AUDIO_PACKET_SIZE         (1024 * sizeof(unsigned int) * 2) // stereo 32bit samples.
-
-#ifdef SAM_WITH_DEBUG
-#define DTS_DEBUG
-#else
-#define DTS_SILENT
-#endif
-
-#ifdef DTS_DEBUG
-
-static int16_t debug_level = 0;
-
-#define dts_printf(level, fmt, x...) do { \
-if (debug_level >= level) printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define dts_printf(level, fmt, x...)
-#endif
-
-#ifndef DTS_SILENT
-#define dts_err(fmt, x...) do { printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define dts_err(fmt, x...)
-#endif
 
 /* ***************************** */
 /* Types                         */

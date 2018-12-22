@@ -52,23 +52,6 @@
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
-#define MP3_DEBUG
-
-#ifdef MP3_DEBUG
-
-static short debug_level = 0;
-
-#define mp3_printf(level, fmt, x...) do { \
-if (debug_level >= level) printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define mp3_printf(level, fmt, x...)
-#endif
-
-#ifndef MP3_SILENT
-#define mp3_err(fmt, x...) do { printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define mp3_err(fmt, x...)
-#endif
 
 /* ***************************** */
 /* Types                         */

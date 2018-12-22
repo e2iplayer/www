@@ -26,6 +26,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <inttypes.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -34,35 +35,12 @@
 #include <errno.h>
 
 #include "common.h"
+#include "debug.h"
 #include "output.h"
 
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
-
-//SULGE DEBUG ENABLED
-//#define SAM_WITH_DEBUG
-#ifdef SAM_WITH_DEBUG
-#define SUBTITLE_DEBUG
-#else
-#define SUBTITLE_SILENT
-#endif
-
-#ifdef SUBTITLE_DEBUG
-
-static short debug_level = 0;
-
-#define subtitle_printf(level, fmt, x...) do { \
-if (debug_level >= level) printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define subtitle_printf(level, fmt, x...)
-#endif
-
-#ifndef SUBTITLE_SILENT
-#define subtitle_err(fmt, x...) do { printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define subtitle_err(fmt, x...)
-#endif
 
 /* Error Constants */
 #define cERR_SUBTITLE_NO_ERROR         0
@@ -228,15 +206,15 @@ static int Write(void *_context, void *data)
 
     if(!strncmp("S_TEXT/SUBRIP", Encoding, 13))
     {
-        fprintf(stderr, "{\"s_a\":{\"id\":%d,\"s\":%lld,\"e\":%lld,\"t\":\"%s\"}}\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS, json_string_escape((char *)out->data));
+        fprintf(stderr, "{\"s_a\":{\"id\":%d,\"s\":%"PRId64",\"e\":%"PRId64",\"t\":\"%s\"}}\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS, json_string_escape((char *)out->data));
     }
     else if (!strncmp("S_TEXT/ASS", Encoding, 10))
     {
-        fprintf(stderr, "{\"s_a\":{\"id\":%d,\"s\":%lld,\"e\":%lld,\"t\":\"%s\"}}\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS, ass_get_text((char *)out->data));
+        fprintf(stderr, "{\"s_a\":{\"id\":%d,\"s\":%"PRId64",\"e\":%"PRId64",\"t\":\"%s\"}}\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS, ass_get_text((char *)out->data));
     }
     else if (!strncmp("D_WEBVTT/SUBTITLES", Encoding, 18))
     {
-        fprintf(stderr, "{\"s_a\":{\"id\":%d,\"s\":%lld,\"e\":%lld,\"t\":\"%s\"}}\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS, json_string_escape((char *)out->data));
+        fprintf(stderr, "{\"s_a\":{\"id\":%d,\"s\":%"PRId64",\"e\":%"PRId64",\"t\":\"%s\"}}\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS, json_string_escape((char *)out->data));
     }
     else
     {

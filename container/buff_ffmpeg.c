@@ -101,7 +101,7 @@ static void update_finish_timeout()
             maxInjectedPts = 0;
         }
         
-        //printf("ret[%d] playPts[%lld] currPts[%lld] maxInjectedPts[%lld]\n", ret, playPts, currPts, maxInjectedPts);
+        //printf("ret[%d] playPts[%"PRId64"] currPts[%"PRId64"] maxInjectedPts[%"PRId64"]\n", ret, playPts, currPts, maxInjectedPts);
         
         /* On some STBs PTS readed from decoder is invalid after seek or at start 
          * this is the reason for additional validation when we what to close immediately
@@ -590,7 +590,7 @@ static int64_t ffmpeg_seek(void *opaque, int64_t offset, int32_t whence)
     if(diff > 0 && diff < rwdiff)
     {
         /* can do the seek inside the buffer */
-        ffmpeg_printf(20, "buffer-seek diff=%lld\n", diff);
+        ffmpeg_printf(20, "buffer-seek diff=%"PRId64"\n", diff);
         if(diff > (ffmpeg_buf + ffmpeg_buf_size) - ffmpeg_buf_read)
         {
             ffmpeg_buf_read = ffmpeg_buf + (diff - ((ffmpeg_buf + ffmpeg_buf_size) - ffmpeg_buf_read));
@@ -603,7 +603,7 @@ static int64_t ffmpeg_seek(void *opaque, int64_t offset, int32_t whence)
     else if(diff < 0 && diff * -1 < ffmpeg_buf_valid_size)
     {
         /* can do the seek inside the buffer */
-        ffmpeg_printf(20, "buffer-seek diff=%lld\n", diff);
+        ffmpeg_printf(20, "buffer-seek diff=%"PRId64"\n", diff);
         int32_t tmpdiff = diff * -1;
         if(tmpdiff > ffmpeg_buf_read - ffmpeg_buf)
         {
@@ -617,7 +617,7 @@ static int64_t ffmpeg_seek(void *opaque, int64_t offset, int32_t whence)
     else
     {
         releasefillerMutex(__FILE__, __FUNCTION__,__LINE__);
-        ffmpeg_printf(20, "real-seek diff=%lld\n", diff);
+        ffmpeg_printf(20, "real-seek diff=%"PRId64"\n", diff);
 
         ffmpeg_do_seek_ret = 0;
         ffmpeg_do_seek = diff;

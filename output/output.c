@@ -24,34 +24,13 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "debug.h"
 #include "common.h"
 #include "output.h"
 
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
-
-#ifdef SAM_WITH_DEBUG
-#define OUTPUT_DEBUG
-#else
-#define OUTPUT_SILENT
-#endif
-
-#ifdef OUTPUT_DEBUG
-
-static short debug_level = 0;
-
-#define output_printf(level, x...) do { \
-if (debug_level >= level) fprintf(stderr, x); } while (0)
-#else
-#define output_printf(level, x...)
-#endif
-
-#ifndef OUTPUT_SILENT
-#define output_err(x...) do { printf(x); } while (0)
-#else
-#define output_err(x...)
-#endif
 
 /* Error Constants */
 #define cERR_OUTPUT_NO_ERROR         0

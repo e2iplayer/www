@@ -34,12 +34,12 @@
 #include <sys/uio.h>
 #include <linux/dvb/video.h>
 #include <linux/dvb/audio.h>
-#include <linux/dvb/stm_ioctls.h>
 #include <memory.h>
 #include <asm/types.h>
 #include <pthread.h>
 #include <errno.h>
 
+#include "stm_ioctls.h"
 #include "common.h"
 #include "output.h"
 #include "debug.h"
@@ -50,27 +50,6 @@
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
-#ifdef SAM_WITH_DEBUG
-#define MP3_DEBUG
-#else
-#define MP3_SILENT
-#endif
-
-#ifdef MP3_DEBUG
-
-static short debug_level = 0;
-
-#define mp3_printf(level, fmt, x...) do { \
-if (debug_level >= level) printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define mp3_printf(level, fmt, x...)
-#endif
-
-#ifndef MP3_SILENT
-#define mp3_err(fmt, x...) do { printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define mp3_err(fmt, x...)
-#endif
 
 /* ***************************** */
 /* Types                         */

@@ -34,12 +34,12 @@
 #include <sys/uio.h>
 #include <linux/dvb/video.h>
 #include <linux/dvb/audio.h>
-#include <linux/dvb/stm_ioctls.h>
 #include <memory.h>
 #include <asm/types.h>
 #include <pthread.h>
 #include <errno.h>
 
+#include "stm_ioctls.h"
 #include "common.h"
 #include "output.h"
 #include "debug.h"
@@ -51,28 +51,6 @@
 /* Makros/Constants              */
 /* ***************************** */
 #define AC3_HEADER_LENGTH       7
-
-#ifdef SAM_WITH_DEBUG
-#define AC3_DEBUG
-#else
-#define AC3_SILENT
-#endif
-
-#ifdef AC3_DEBUG
-
-static short debug_level = 0;
-
-#define ac3_printf(level, fmt, x...) do { \
-if (debug_level >= level) printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define ac3_printf(level, fmt, x...)
-#endif
-
-#ifndef AC3_SILENT
-#define ac3_err(fmt, x...) do { printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define ac3_err(fmt, x...)
-#endif
 
 /* ***************************** */
 /* Types                         */

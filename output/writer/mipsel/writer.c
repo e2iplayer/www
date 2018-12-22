@@ -29,28 +29,11 @@
 #include "misc.h"
 #include "writer.h"
 #include "common.h"
+#include "debug.h"
 
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
-
-#define WRITER_DEBUG
-
-#ifdef WRITER_DEBUG
-
-static short debug_level = 0;
-
-#define writer_printf(level, x...) do { \
-if (debug_level >= level) printf(x); } while (0)
-#else
-#define writer_printf(level, x...)
-#endif
-
-#ifndef WRITER_SILENT
-#define writer_err(x...) do { printf(x); } while (0)
-#else
-#define writer_err(x...)
-#endif
 
 /* ***************************** */
 /* Types                         */

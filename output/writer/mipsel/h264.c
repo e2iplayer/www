@@ -45,6 +45,7 @@
 #include "stm_ioctls.h"
 #include "bcm_ioctls.h"
 
+#include "debug.h"
 #include "common.h"
 #include "output.h"
 #include "debug.h"
@@ -55,24 +56,6 @@
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
-#define H264_SILENT
-//#define H264_DEBUG
-#ifdef H264_DEBUG
-
-static short debug_level = 0;
-
-#define h264_printf(level, fmt, x...) do { \
-if (debug_level >= level) printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define h264_printf(level, fmt, x...)
-#endif
-
-#ifndef H264_SILENT
-#define h264_err(fmt, x...) do { printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define h264_err(fmt, x...)
-#endif
-
 #define IOVEC_SIZE                                      128
 
 /* ***************************** */

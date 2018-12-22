@@ -23,28 +23,7 @@
 #include <stdint.h>
 
 #include "common.h"
-
-#ifdef SAM_WITH_DEBUG
-#define CONTAINER_DEBUG
-#else
-#define CONTAINER_SILENT
-#endif
-
-#ifdef CONTAINER_DEBUG
-
-static short debug_level = 0;
-
-#define container_printf(level, x...) do { \
-if (debug_level >= level) printf(x); } while (0)
-#else
-#define container_printf(level, x...)
-#endif
-
-#ifndef CONTAINER_SILENT
-#define container_err(x...) do { printf(x); } while (0)
-#else
-#define container_err(x...)
-#endif
+#include "debug.h"
 
 static Container_t * AvailableContainer[] = {
     &FFMPEGContainer,

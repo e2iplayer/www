@@ -27,34 +27,12 @@
 #include <libavformat/avformat.h>
 #include "manager.h"
 #include "common.h"
+#include "debug.h"
 
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
 #define TRACKWRAP 20
-
-//#define SAM_WITH_DEBUG
-#ifdef SAM_WITH_DEBUG
-#define AUDIO_MGR_DEBUG
-#else
-#define AUDIO_MGR_SILENT
-#endif
-
-#ifdef AUDIO_MGR_DEBUG
-
-static short debug_level = 40;
-
-#define audio_mgr_printf(level, fmt, x...) do { \
-if (debug_level >= level) printf("[%s:%s] \n" fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define audio_mgr_printf(level, x...)
-#endif
-
-#ifndef AUDIO_MGR_SILENT
-#define audio_mgr_err(x...) do { printf(x); } while (0)
-#else
-#define audio_mgr_err(x...)
-#endif
 
 /* Error Constants */
 #define cERR_AUDIO_MGR_NO_ERROR        0

@@ -152,10 +152,13 @@ static AVCodecContext *wrapped_avcodec_get_context(uint32_t cAVIdx, AVStream *st
             avcodec_free_context(&avCodecCtx);
             return NULL;
         }
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 9, 100)
         av_codec_set_pkt_timebase(avCodecCtx, stream->time_base);
-        
+#else
+        avCodecCtx->pkt_timebase = stream->time_base;
+#endif
         store_avcodec_context(avCodecCtx, cAVIdx, stream->id);
-        
+
         return avCodecCtx;
     }
 #else
@@ -184,5 +187,24 @@ static void wrapped_avcodec_flush_buffers(uint32_t cAVIdx)
             avcodec_flush_buffers(avContextTab[cAVIdx]->streams[j]->codec);
         }
     }
-#endif    
+#endif
 }
+
+static void wrapped_register_all(void)
+{
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 9, 100)
+    avcodec_register_all();
+    av_register_all();
+#endif
+}
+
+static int64_t wrapped_frame_get_best_effort_timestamp(const AVFrame *frame)
+{
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 9, 100)
+    return av_frame_get_best_effort_timestamp(frame);
+#else
+    return frame->best_effort_timestamp;
+#endif
+}
+
+

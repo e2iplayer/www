@@ -53,29 +53,6 @@
 /* Makros/Constants              */
 /* ***************************** */
 
-//#define SAM_WITH_DEBUG
-#ifdef SAM_WITH_DEBUG
-#define MPEG4_DEBUG
-#else
-#define MPEG4_SILENT
-#endif
-
-#ifdef MPEG4_DEBUG
-
-static short debug_level = 0;
-
-#define mpeg4_printf(level, fmt, x...) do { \
-if (debug_level >= level) printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define mpeg4_printf(level, fmt, x...)
-#endif
-
-#ifndef MPEG4_SILENT
-#define mpeg4_err(fmt, x...) do { printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define mpeg4_err(fmt, x...)
-#endif
-
 /* ***************************** */
 /* Types                         */
 /* ***************************** */

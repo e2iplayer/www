@@ -34,12 +34,12 @@
 #include <sys/uio.h>
 #include <linux/dvb/video.h>
 #include <linux/dvb/audio.h>
-#include <linux/dvb/stm_ioctls.h>
 #include <memory.h>
 #include <asm/types.h>
 #include <pthread.h>
 #include <errno.h>
 
+#include "stm_ioctls.h"
 #include "common.h"
 #include "output.h"
 #include "debug.h"
@@ -48,7 +48,7 @@
 #include "writer.h"
 
 /* ***************************** */
-/* Makros/Constants	      */
+/* Makros/Constants              */
 /* ***************************** */
 
 #define WMV3_PRIVATE_DATA_LENGTH			4
@@ -59,37 +59,14 @@
 #define METADATA_STRUCT_C_START	     8
 
 
-#define VC1_SEQUENCE_LAYER_METADATA_START_CODE	  0x80
-#define VC1_FRAME_START_CODE			    0x0d
-
-#ifdef SAM_WITH_DEBUG
-#define VC1_DEBUG
-#else
-#define VC1_SILENT
-#endif
-
-#ifdef VC1_DEBUG
-
-static short debug_level = 0;
-
-#define vc1_printf(level, fmt, x...) do { \
-if (debug_level >= level) printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define vc1_printf(level, fmt, x...)
-#endif
-
-#ifndef VC1_SILENT
-#define vc1_err(fmt, x...) do { printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define vc1_err(fmt, x...)
-#endif
-
+#define VC1_SEQUENCE_LAYER_METADATA_START_CODE    0x80
+#define VC1_FRAME_START_CODE                      0x0d
 
 /* ***************************** */
-/* Types			 */
+/* Types                         */
 /* ***************************** */
 
-static const unsigned char  SequenceLayerStartCode[]	  = {0x00,    0x00,   0x01,   VC1_SEQUENCE_LAYER_METADATA_START_CODE};
+static const unsigned char  SequenceLayerStartCode[]  = {0x00,    0x00,   0x01,   VC1_SEQUENCE_LAYER_METADATA_START_CODE};
 
 
 static const unsigned char  Metadata[]	  =

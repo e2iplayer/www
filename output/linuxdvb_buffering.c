@@ -36,6 +36,7 @@
 #include <time.h>
 
 #include "common.h"
+#include "debug.h"
 #include "misc.h"
 #include "writer.h"
 
@@ -59,29 +60,6 @@ typedef struct BufferingNode_s {
 /* ***************************** */
 #define cERR_LINUX_DVB_BUFFERING_NO_ERROR      0
 #define cERR_LINUX_DVB_BUFFERING_ERROR        -1
-
-//#define SAM_WITH_DEBUG
-#ifdef SAM_WITH_DEBUG
-#define LINUX_DVB_BUFFERING_DEBUG
-#else
-#define LINUX_DVB_BUFFERING_SILENT
-#endif
-
-#ifdef LINUX_DVB_BUFFERING_DEBUG
-
-static const uint16_t debug_level = 40;
-
-#define buff_printf(level, fmt, x...) do { \
-if (debug_level >= level) printf("[%s:%d:%s] " fmt, __FILE__, __LINE__, __FUNCTION__, ## x); } while (0)
-#else
-#define buff_printf(level, fmt, x...)
-#endif
-
-#ifndef LINUX_DVB_BUFFERING_SILENT
-#define buff_err(fmt, x...) do { printf("[%s:%d:%s] " fmt, __FILE__, __LINE__, __FUNCTION__, ## x); } while (0)
-#else
-#define buff_err(fmt, x...)
-#endif
 
 /* ***************************** */
 /* Varaibles                     */

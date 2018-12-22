@@ -34,7 +34,6 @@
 #include <sys/uio.h>
 #include <linux/dvb/video.h>
 #include <linux/dvb/audio.h>
-#include <linux/dvb/stm_ioctls.h>
 #include <memory.h>
 #include <asm/types.h>
 #include <pthread.h>
@@ -42,6 +41,7 @@
 #include <assert.h>
 #include <stdint.h>
 
+#include "stm_ioctls.h"
 #include "common.h"
 #include "output.h"
 #include "debug.h"
@@ -52,28 +52,6 @@
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
-#ifdef SAM_WITH_DEBUG
-#define H264_DEBUG
-#else
-#define H264_SILENT
-#endif
-
-#ifdef H264_DEBUG
-
-static short debug_level = 0;
-
-#define h264_printf(level, fmt, x...) do { \
-if (debug_level >= level) printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define h264_printf(level, fmt, x...)
-#endif
-
-#ifndef H264_SILENT
-#define h264_err(fmt, x...) do { printf("[%s:%s] " fmt, __FILE__, __FUNCTION__, ## x); } while (0)
-#else
-#define h264_err(fmt, x...)
-#endif
-
 #define NALU_TYPE_PLAYER2_CONTAINER_PARAMETERS          24
 #define CONTAINER_PARAMETERS_VERSION                    0x00
 
