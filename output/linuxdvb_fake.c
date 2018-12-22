@@ -104,12 +104,12 @@ int LinuxDvbOpen(Context_t  *context __attribute__((unused)), char *type)
 
     if (video && videofd < 0) 
     {
-        videofd = open(VIDEODEV, O_CREAT | O_TRUNC | O_WRONLY | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        videofd = open(VIDEODEV, O_CREAT | O_TRUNC | O_WRONLY | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH, 0666);
     }
 
     if (audio && audiofd < 0) 
     {
-        audiofd = open(AUDIODEV, O_CREAT | O_TRUNC | O_WRONLY | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        audiofd = open(AUDIODEV, O_CREAT | O_TRUNC | O_WRONLY | S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH, 0666);
     }
 
     return 0;
