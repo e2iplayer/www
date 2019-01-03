@@ -552,6 +552,8 @@ static void FFMPEGThread(Context_t *context)
     int64_t lastVideoDts = -1;
     int64_t lastAudioDts = -1;
     
+    int64_t multiContextLastPts[IPTV_AV_CONTEXT_MAX_NUM] = {INVALID_PTS_VALUE, INVALID_PTS_VALUE};
+    
     int64_t showtime = 0;
     int64_t bofcount = 0;
     int32_t       err = 0;
@@ -637,6 +639,7 @@ static void FFMPEGThread(Context_t *context)
                 uint32_t i = 0;
                 for(; i<IPTV_AV_CONTEXT_MAX_NUM; i+=1)
                 {
+                    multiContextLastPts[i] = INVALID_PTS_VALUE;
                     if(NULL != avContextTab[i])
                     {
                         if (i == 1)
@@ -699,12 +702,23 @@ static void FFMPEGThread(Context_t *context)
         {
             if(NULL != avContextTab[1])
             {
-                cAVIdx = currentVideoPts <= currentAudioPts ? 0 : 1;
-                if (1 == cAVIdx && prev_seek_time_sec >= 0 )
+                if (prev_seek_time_sec >= 0)
                 {
-                    avformat_seek_file(avContextTab[1], -1, (currentVideoPts / 90000) * AV_TIME_BASE - AV_TIME_BASE, (currentVideoPts / 90000) * AV_TIME_BASE, (currentVideoPts / 90000) * AV_TIME_BASE + AV_TIME_BASE, 0);
-                    prev_seek_time_sec = -1;
-                    wrapped_avcodec_flush_buffers(1);
+                    if (multiContextLastPts[0] != INVALID_PTS_VALUE) {
+                        int64_t target = av_rescale(multiContextLastPts[0], AV_TIME_BASE, 90000);
+                        avformat_seek_file(avContextTab[1], -1, INT64_MIN, target, INT64_MAX, 0);
+                        prev_seek_time_sec = -1;
+                        wrapped_avcodec_flush_buffers(1);
+                        cAVIdx = 1;
+                    } else {
+                        cAVIdx = 0;
+                    }
+                } else {
+                    if (multiContextLastPts[0] != INVALID_PTS_VALUE && multiContextLastPts[1] != INVALID_PTS_VALUE) {
+                        cAVIdx = multiContextLastPts[0] < multiContextLastPts[1] ? 0 : 1;
+                    } else {
+                        cAVIdx = !cAVIdx;
+                    }
                 }
             }
             else
@@ -722,6 +736,9 @@ static void FFMPEGThread(Context_t *context)
             Track_t *subtitleTrack = NULL;
 
             int32_t pid = avContextTab[cAVIdx]->streams[packet.stream_index]->id;
+            
+            multiContextLastPts[cAVIdx] = calcPts(cAVIdx, avContextTab[cAVIdx]->streams[packet.stream_index], packet.pts);
+            ffmpeg_printf(200, "Ctx %d PTS: %"PRId64" PTS[1] %"PRId64"\n", cAVIdx, multiContextLastPts[cAVIdx], multiContextLastPts[1]);
             
             reset_finish_timeout();
             if(avContextTab[cAVIdx]->streams[packet.stream_index]->discard != AVDISCARD_ALL)
@@ -2021,7 +2038,8 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
             {
             case AVMEDIA_TYPE_VIDEO:
                 ffmpeg_printf(10, "CODEC_TYPE_VIDEO %d\n", get_codecpar(stream)->codec_type);
-                stream->discard = AVDISCARD_ALL; /* by default we discard all video streams */
+                // do not discard any stream from second context
+                stream->discard = 0 == cAVIdx ? AVDISCARD_ALL : AVDISCARD_DEFAULT; /* by default we discard all video streams */
                 if (encoding != NULL) 
                 {
                     track.type           = eTypeES;
@@ -2118,7 +2136,8 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                 break;
             case AVMEDIA_TYPE_AUDIO:
                 ffmpeg_printf(10, "CODEC_TYPE_AUDIO %d\n",get_codecpar(stream)->codec_type);
-                stream->discard = AVDISCARD_ALL;
+                // do not discard any stream from second context
+                stream->discard = 0 == cAVIdx ? AVDISCARD_ALL : AVDISCARD_DEFAULT;
                 if (encoding != NULL)
                 {
                     AVDictionaryEntry *lang;
@@ -2966,7 +2985,10 @@ static int32_t container_ffmpeg_switch_audio(Context_t *context, int32_t *arg)
             int32_t i;
             for (i=0; i < TrackCount; ++i)
             {
-                ((AVStream*)Tracks[i].stream)->discard = Tracks[i].Id == *arg ? AVDISCARD_DEFAULT : AVDISCARD_ALL;
+                // do not discard any stream from second context
+                if (Tracks[i].AVIdx == 0) {
+                    ((AVStream*)Tracks[i].stream)->discard = Tracks[i].Id == *arg ? AVDISCARD_DEFAULT : AVDISCARD_ALL;
+                }
             }
         }
     }
