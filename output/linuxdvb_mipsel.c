@@ -78,7 +78,7 @@ pthread_mutex_t LinuxDVBmutex;
 /* ***************************** */
 /* Prototypes                    */
 /* ***************************** */
-int32_t LinuxDvbBuffOpen(Context_t *context, char *type, int outfd);
+int32_t LinuxDvbBuffOpen(Context_t *context, char *type, int outfd, void *mtx);
 int32_t LinuxDvbBuffClose(Context_t *context);
 int32_t LinuxDvbBuffFlush(Context_t *context);
 int32_t LinuxDvbBuffResume(Context_t *context);
@@ -98,7 +98,7 @@ int LinuxDvbStop(Context_t  *context, char * type);
 
 static int LinuxDvbMapBypassMode(int bypass)
 {
-    if (0x30 == bypass && IsDreambox())
+    if (0x30 == bypass && STB_DREAMBOX == GetSTBType())
     {
         return 0x0f;
     }
@@ -138,7 +138,7 @@ int LinuxDvbOpen(Context_t  *context __attribute__((unused)), char *type)
         }
 
         if (isBufferedOutput)
-            LinuxDvbBuffOpen(context, type, videofd);
+            LinuxDvbBuffOpen(context, type, videofd, &LinuxDVBmutex);
     }
     if (audio && audiofd < 0) 
     {
@@ -166,7 +166,7 @@ int LinuxDvbOpen(Context_t  *context __attribute__((unused)), char *type)
         }
         
         if (isBufferedOutput)
-            LinuxDvbBuffOpen(context, type, audiofd);
+            LinuxDvbBuffOpen(context, type, audiofd, &LinuxDVBmutex);
     }
 
     return cERR_LINUXDVB_NO_ERROR;

@@ -135,7 +135,7 @@ static int writeData(void* _call)
         *(data++) = (call->Height >> 8) & 0xff;
         *(data++) = call->Height & 0xff;
         if (call->private_data && codec_size) memcpy(data, call->private_data, codec_size);
-        if(IsDreambox() || 0 != ioctl(call->fd, VIDEO_SET_CODEC_DATA, &videocodecdata))
+        if(STB_DREAMBOX == GetSTBType() || 0 != ioctl(call->fd, VIDEO_SET_CODEC_DATA, &videocodecdata))
         {
             iov[ic].iov_base  = videocodecdata.data;
             iov[ic++].iov_len = videocodecdata.length;

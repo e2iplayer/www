@@ -223,12 +223,12 @@ static int32_t writeData(void *_call)
         size -= cpSize;
         
         uint32_t addHeaderSize = 0;
-        if( IsDreambox() )
+        if( STB_DREAMBOX == GetSTBType() )
         {
             addHeaderSize = 4;
         }
         uint32_t headerSize = InsertPesHeader(PesHeader, fixed_buffersize + 4 + addHeaderSize + sizeof(codec_data), MPEG_AUDIO_PES_START_CODE, fixed_buffertimestamp, 0);
-        if( IsDreambox() )
+        if( STB_DREAMBOX == GetSTBType() )
         {
             PesHeader[headerSize++] = 0x42; // B
             PesHeader[headerSize++] = 0x43; // C

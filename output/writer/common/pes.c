@@ -88,31 +88,37 @@ int32_t InsertVideoPrivateDataHeader(uint8_t *data, int32_t payload_size)
     FlushBits (&ld2);
 
     return PES_PRIVATE_DATA_LENGTH + 1;
+}
 
+void UpdatePesHeaderPayloadSize(uint8_t *data, int32_t size)
+{
+    if (size > MAX_PES_PACKET_SIZE || size < 0)
+            size = 0;
+    data[4] = size >> 8;
+    data[5] = size & 0xFF;
 }
 
 int32_t InsertPesHeader(uint8_t *data, int32_t size, uint8_t stream_id, uint64_t pts, int32_t pic_start_code)
 {
     BitPacker_t ld2 = {data, 0, 32};
 
-    if (size > (MAX_PES_PACKET_SIZE-13))
-    {
-        size = -1; // unbounded
+    PutBits(&ld2,0x0  ,8);
+    PutBits(&ld2,0x0  ,8);
+    PutBits(&ld2,0x1  ,8);       // Start Code
+    PutBits(&ld2,stream_id ,8);  // Stream_id = Audio Stream
+
+    if (size > 0) {
+        size += 3 + (pts != INVALID_PTS_VALUE ? 5:0) + (pic_start_code ? (5) : 0);
     }
 
-    PutBits(&ld2,0x0  ,8);
-    PutBits(&ld2,0x0  ,8);
-    PutBits(&ld2,0x1  ,8);  // Start Code
-    PutBits(&ld2,stream_id ,8);  // Stream_id = Audio Stream
+    if (size > MAX_PES_PACKET_SIZE || size < 0)
+    {
+        size = 0; // unbounded
+    }
+
     //4
-    if (-1 == size)
-    {
-        PutBits(&ld2,0x0,16);
-    }
-    else
-    {
-        PutBits(&ld2,size + 3 + (pts != INVALID_PTS_VALUE ? 5:0) + (pic_start_code ? (5) : 0),16); // PES_packet_length
-    }
+    PutBits(&ld2, size, 16); // PES_packet_length
+
     //6 = 4+2
     PutBits(&ld2,0x2  ,2);  // 10
     PutBits(&ld2,0x0  ,2);  // PES_Scrambling_control
@@ -122,7 +128,7 @@ int32_t InsertPesHeader(uint8_t *data, int32_t size, uint8_t stream_id, uint64_t
     PutBits(&ld2,0x0  ,1);  // Original or Copy
     //7 = 6+1
 
-    if (pts!=INVALID_PTS_VALUE)
+    if (pts != INVALID_PTS_VALUE)
     {
         PutBits(&ld2,0x2 ,2);
     }

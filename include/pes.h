@@ -28,5 +28,6 @@
 
 int32_t InsertPesHeader (uint8_t *data, int32_t size, uint8_t stream_id, uint64_t pts, int32_t pic_start_code);
 int32_t InsertVideoPrivateDataHeader(uint8_t *data, int32_t payload_size);
+void UpdatePesHeaderPayloadSize(uint8_t *data, int32_t size);
 
 #endif

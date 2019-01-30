@@ -128,7 +128,7 @@ static int writeData(void* _call)
         videocodecdata.data  = malloc(videocodecdata.length);
         memset(videocodecdata.data, 0, videocodecdata.length);
         memcpy(videocodecdata.data + 8, call->private_data, call->private_size);
-        if(IsDreambox() || 0 != ioctl(call->fd, VIDEO_SET_CODEC_DATA, &videocodecdata))
+        if(STB_DREAMBOX == GetSTBType() || 0 != ioctl(call->fd, VIDEO_SET_CODEC_DATA, &videocodecdata))
         {
             iov[ic].iov_base  = videocodecdata.data;
             iov[ic++].iov_len = videocodecdata.length;

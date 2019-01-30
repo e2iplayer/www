@@ -7,6 +7,7 @@
 #include "common.h"
 
 typedef enum { eNone, eAudio, eVideo} eWriterType_t;
+typedef ssize_t (* WriteV_t) (int, const struct iovec *, int);
 
 typedef struct {
     int                    fd;
@@ -22,7 +23,7 @@ typedef struct {
     unsigned int           Height;
     unsigned char          Version;
     unsigned int           InfoFlags;
-    ssize_t                (* WriteV) (int, const struct iovec *, int);
+    WriteV_t               WriteV;
 } WriterAVCallData_t;
 
 
@@ -89,6 +90,8 @@ Writer_t* getDefaultAudioWriter();
 ssize_t write_with_retry(int fd, const void *buf, int size);
 ssize_t writev_with_retry(int fd, const struct iovec *iov, int ic);
 
-ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, const void *buf, int size);
+ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, void *pDVBMtx, const void *buf, int size);
 void FlushPipe(int pipefd);
+
+ssize_t WriteExt(WriteV_t _call, int fd, void *data, size_t size);
 #endif

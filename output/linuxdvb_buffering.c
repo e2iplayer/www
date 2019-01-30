@@ -80,6 +80,8 @@ static int videofd = -1;
 static int audiofd = -1;
 static int g_pfd[2] = {-1, -1};
 
+static pthread_mutex_t *g_pDVBMtx = NULL;
+
 /* ***************************** */
 /* Prototypes                    */
 /* ***************************** */
@@ -89,7 +91,10 @@ static int g_pfd[2] = {-1, -1};
 /* ***************************** */
 static void WriteWakeUp()
 {
-    write(g_pfd[1], "x", 1);
+    int ret = write(g_pfd[1], "x", 1);
+    if (ret != 1) {
+        buff_printf(20, "WriteWakeUp write return %d\n", ret);
+    }
 }
 
 /* **************************** */
@@ -174,7 +179,7 @@ static void LinuxDvbBuffThread(Context_t *context)
             /* Write data to valid output */
             uint8_t *dataPtr = (uint8_t *)nodePtr + sizeof(BufferingNode_t);
             int fd = nodePtr->dataType == OUTPUT_VIDEO ? videofd : audiofd;
-            if (0 != WriteWithRetry(context, g_pfd[0], fd, dataPtr, nodePtr->dataSize))
+            if (0 != WriteWithRetry(context, g_pfd[0], fd, g_pDVBMtx, dataPtr, nodePtr->dataSize))
             {
                 buff_err("Something is WRONG\n");
             }
@@ -205,7 +210,7 @@ uint32_t LinuxDvbBuffGetSize()
     return maxBufferingDataSize;
 }
 
-int32_t LinuxDvbBuffOpen(Context_t *context, char *type, int outfd)
+int32_t LinuxDvbBuffOpen(Context_t *context, char *type, int outfd, void *mtx)
 {
     int32_t error = 0;
     int32_t ret = cERR_LINUX_DVB_BUFFERING_NO_ERROR;
@@ -217,6 +222,8 @@ int32_t LinuxDvbBuffOpen(Context_t *context, char *type, int outfd)
         pthread_attr_t attr;
         pthread_attr_init(&attr);
         pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+        g_pDVBMtx = mtx;
 
         if((error = pthread_create(&bufferingThread, &attr, (void *)&LinuxDvbBuffThread, context)) != 0) 
         {

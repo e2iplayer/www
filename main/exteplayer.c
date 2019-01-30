@@ -93,7 +93,10 @@ static pthread_mutex_t playbackStartMtx;
 
 static void TerminateWakeUp()
 {
-    write(g_pfd[1], "x", 1);
+    int ret = write(g_pfd[1], "x", 1);
+    if (ret != 1) {
+        printf("TerminateWakeUp write return %d\n", ret);
+    }
 }
 
 static void *TermThreadFun(void *arg)
@@ -553,7 +556,7 @@ int main(int argc, char* argv[])
     memset(argvBuff, '\0', sizeof(argvBuff));
     int commandRetVal = -1;
     /* inform client that we can handle additional commands */
-    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 51);
+    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 52);
 
     PlayFiles_t playbackFiles;
     memset(&playbackFiles, 0x00, sizeof(playbackFiles));

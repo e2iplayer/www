@@ -126,3 +126,25 @@ void FlushBits(BitPacker_t * ld)
     ld->Remaining = 32;
     ld->BitBuffer = 0;
 }
+
+stb_type_t GetSTBType()
+{
+    static stb_type_t type = STB_UNKNOWN;
+    if (type == STB_UNKNOWN) {
+        struct stat buffer;
+        if (access("/proc/stb/tpm/0/serial", F_OK) != -1) {
+            type = STB_DREAMBOX;
+        }
+        else if (access("/proc/stb/info/vumodel", F_OK) != -1) {
+            type = STB_VUPLUS;
+        }
+        else if (access("/sys/firmware/devicetree/base/soc/hisilicon_clock/name", F_OK) != -1) {
+            type = STB_HISILICON;
+        }
+        else {
+            type = STB_OTHER;
+        }
+    }
+
+    return type;
+}

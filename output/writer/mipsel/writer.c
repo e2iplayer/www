@@ -25,6 +25,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <pthread.h>
 
 #include "misc.h"
 #include "writer.h"
@@ -34,10 +35,20 @@
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
+#define getDVBMutex(pmtx) do { if (pmtx) pthread_mutex_lock(pmtx);} while(false);
+#define releaseDVBMutex(pmtx) do { if (pmtx) pthread_mutex_unlock(pmtx);} while(false);
+
+#define FULL_PROTECTION_MODE 1
 
 /* ***************************** */
 /* Types                         */
 /* ***************************** */
+typedef enum {
+    DVB_STS_UNKNOWN, 
+    DVB_STS_SEEK, 
+    DVB_STS_PAUSE, 
+    DVB_STS_EXIT
+} DVBState_t; 
 
 /* ***************************** */
 /* Varaibles                     */
@@ -81,7 +92,7 @@ static Writer_t * AvailableWriter[] = {
 /* ***************************** */
 /*  Functions                    */
 /* ***************************** */
-ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, const void *buf, int size)
+ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, void *pDVBMtx, const void *buf, int size)
 {
     fd_set rfds;
     fd_set wfds;
@@ -132,7 +143,63 @@ ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, const void *buf, 
         
         if(FD_ISSET(fd, &wfds))
         {
-            ret = write(fd, buf, size);
+            // special protection to not allow inject AV data
+            // at PAUSE, SEEK and vice versa
+            if (pDVBMtx && STB_HISILICON == GetSTBType()) {
+                DVBState_t dvbSts = DVB_STS_UNKNOWN;
+                getDVBMutex(pDVBMtx);
+                ret = 0;
+                if (PlaybackDieNow(0))
+                    dvbSts = DVB_STS_EXIT;
+                else if (context->playback->isSeeking)
+                    dvbSts = DVB_STS_SEEK;
+                else if (context->playback->isPaused)
+                    dvbSts = DVB_STS_PAUSE;
+                else {
+#ifdef FULL_PROTECTION_MODE
+                    ret = write(fd, buf, size);
+#endif
+                }
+                releaseDVBMutex(pDVBMtx);
+
+                if (dvbSts == DVB_STS_EXIT || dvbSts == DVB_STS_SEEK) {
+                    return 0;
+                }
+                else if (dvbSts == DVB_STS_PAUSE) {
+                    FD_ZERO(&rfds);
+                    FD_SET(pipefd, &rfds);
+                    
+                    tv.tv_sec = 0;
+                    tv.tv_usec = 500000; // 500ms
+                
+                    retval = select(pipefd + 1, &rfds, NULL, NULL, &tv);
+                    if (retval < 0)
+                    {
+                        break;
+                    }
+                
+                    if (retval == 0)
+                    {
+                        //printf("RETURN FROM SELECT DUE TO TIMEOUT TIMEOUT\n");
+                        continue;
+                    }
+                    
+                    if(FD_ISSET(pipefd, &rfds))
+                    {
+                        FlushPipe(pipefd);
+                        //printf("RETURN FROM SELECT DUE TO pipefd SET\n");
+                        continue;
+                    }
+                } 
+#ifndef FULL_PROTECTION_MODE
+                else {
+                    ret = write(fd, buf, size);
+                }
+#endif
+            } else {
+                ret = write(fd, buf, size);
+            }
+            
             if (ret < 0)
             {
                 switch(errno)

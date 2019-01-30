@@ -96,7 +96,7 @@ static Writer_t * AvailableWriter[] = {
 /* ***************************** */
 /*  Functions                    */
 /* ***************************** */
-ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, const void *buf, int size)
+ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, void *pDVBMtx, const void *buf, int size)
 {
     fd_set rfds;
     

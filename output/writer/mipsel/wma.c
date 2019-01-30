@@ -109,7 +109,7 @@ static int writeData(void* _call)
 
     uint32_t packetLength = 4 + call->private_size + call->len;
     
-    if( IsDreambox() )
+    if( STB_DREAMBOX == GetSTBType() )
     {
         packetLength += 4;
     }
@@ -125,7 +125,7 @@ static int writeData(void* _call)
     }
 
     uint32_t headerSize = InsertPesHeader(PesHeader, packetLength, MPEG_AUDIO_PES_START_CODE, call->Pts, 0);
-    if( IsDreambox() )
+    if( STB_DREAMBOX == GetSTBType() )
     {
         PesHeader[headerSize++] = 0x42; // B
         PesHeader[headerSize++] = 0x43; // C

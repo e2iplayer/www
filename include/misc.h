@@ -1,5 +1,5 @@
-#ifndef misc_123
-#define misc_123
+#ifndef _exteplayer3_misc_
+#define _exteplayer3_misc_
 
 #include <dirent.h>
 #include <sys/types.h>
@@ -20,19 +20,26 @@ typedef struct BitPacker_s
     int32_t    Remaining;                              /* number of remaining in the shifter */
 } BitPacker_t;
 
+typedef enum {
+    STB_UNKNOWN,
+    STB_DREAMBOX,
+    STB_VUPLUS,
+    STB_HISILICON,
+    STB_OTHER,
+} stb_type_t;
+
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
-
 #define INVALID_PTS_VALUE                       0x200000000ull
 
 /* ***************************** */
 /* Prototypes                    */
 /* ***************************** */
-
 void PutBits(BitPacker_t * ld, uint32_t code, uint32_t length);
 void FlushBits(BitPacker_t * ld);
 int8_t PlaybackDieNow(int8_t val); 
+stb_type_t GetSTBType();
 
 /* ***************************** */
 /* MISC Functions                */
@@ -51,54 +58,6 @@ static inline char *getExtension(char * name)
     return NULL;
 }
 
-/* the function returns the base name */
-static inline char * basename(char * name)
-{
-  int i = 0;
-  int pos = 0;
-
-  while(name[i] != 0)
-  {
-    if(name[i] == '/')
-      pos = i;
-    i++;
-  }
-
-  if(name[pos] == '/')
-    pos++;
-
-  return name + pos;
-}
-
-/* the function returns the directry name */
-static inline char * dirname(char * name)
-{
-  static char path[100];
-  uint32_t i = 0;
-  int32_t pos = 0;
-
-  while((name[i] != 0) && (i < sizeof(path)))
-  {
-    if(name[i] == '/')
-    {
-        pos = i;
-    }
-    path[i] = name[i];
-    i++;
-  }
-
-  path[i] = 0;
-  path[pos] = 0;
-
-  return path;
-}
-
-static inline int32_t IsDreambox()
-{
-    struct stat buffer;   
-    return (stat("/proc/stb/tpm/0/serial", &buffer) == 0);
-}
-
 static inline uint32_t ReadUint32(uint8_t *buffer)
 {
     uint32_t num = (uint32_t)buffer[0] << 24 |
@@ -115,4 +74,4 @@ static inline uint16_t ReadUInt16(uint8_t *buffer)
     return num;
 }
 
-#endif
+#endif // _exteplayer3_misc_

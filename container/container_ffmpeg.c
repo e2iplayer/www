@@ -786,7 +786,7 @@ static void FFMPEGThread(Context_t *context)
                 else
 #endif
                 {
-                    uint8_t skipPacket = 0;
+                    bool skipPacket = false;
                     currentVideoPts = videoTrack->pts = pts = calcPts(cAVIdx, videoTrack->stream, packet.pts);
                     videoTrack->dts = dts = calcPts(cAVIdx, videoTrack->stream, packet.dts);
 
@@ -808,14 +808,14 @@ static void FFMPEGThread(Context_t *context)
                             {
                                 // skip already injected VIDEO packet
                                 ffmpeg_printf(200, "skip already injected VIDEO packet\n");
-                                skipPacket = 1;
+                                skipPacket = true;
                             }
                         }
                         else
                         {
                             // skip VIDEO packet with unknown DTS
                             ffmpeg_printf(200, "skip VIDEO packet with unknown DTS\n");
-                            skipPacket = 1;
+                            skipPacket = true;
                         }
                     }
                     
