@@ -130,7 +130,7 @@ static int writeData(void *_call, bool is_vp6, bool is_vp9)
 
     int32_t payload_len = call->len + pes_header_len - 6;
 
-    if (!is_vp9 || STB_VUPLUS == GetSTBType() || STB_HISILICON == GetSTBType()) {
+    if (!is_vp9 || STB_VUPLUS == GetSTBType() || STB_HISILICON == GetSTBType() || STB_DREAMBOX == GetSTBType()) {
         UpdatePesHeaderPayloadSize(PesHeader, payload_len);
         // it looks like for VUPLUS drivers PES header must be written separately
         int ret = call->WriteV(call->fd, iov, 1);
