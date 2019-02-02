@@ -524,3 +524,21 @@
 #else
 #define wmv_err(...)
 #endif
+
+/*******************************************
+ * mjpeg
+ *******************************************/
+#define MJPEG_DEBUG_LEVEL 0
+#define MJPEG_SILENT
+
+#if MJPEG_DEBUG_LEVEL
+#define mjpeg_printf(...) log_printf(MJPEG_DEBUG_LEVEL, __VA_ARGS__)
+#else
+#define mjpeg_printf(...)
+#endif
+
+#ifndef MJPEG_SILENT
+#define mjpeg_err(...) log_error(__VA_ARGS__)
+#else
+#define mjpeg_err(...)
+#endif
