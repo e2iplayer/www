@@ -281,18 +281,18 @@ struct Writer_s WriterVideoVP9 = {
     &capsVP9
 };
 
-static WriterCaps_t capsSPARK = {
-    "spark",
+static WriterCaps_t capsFLV= {
+    "flv1",
     eVideo,
-    "V_SPARK",
+    "V_FLV",
     VIDEO_ENCODING_VC1,
     STREAMTYPE_SPARK,
     CT_SPARK
 };
 
-struct Writer_s WriterVideoSPARK = {
+struct Writer_s WriterVideoFLV = {
     &reset,
     &writeDataVP8,
     NULL,
-    &capsSPARK
+    &capsFLV
 };

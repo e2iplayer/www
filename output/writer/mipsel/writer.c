@@ -78,7 +78,7 @@ static Writer_t * AvailableWriter[] = {
     &WriterVideoVP6,
     &WriterVideoVP8,
     &WriterVideoVP9,
-    &WriterVideoSPARK,
+    &WriterVideoFLV,
     &WriterVideoWMV,
     &WriterVideoMJPEG,
     NULL

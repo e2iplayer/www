@@ -150,3 +150,19 @@ struct Writer_s WriterVideoMPEG4 = {
     NULL,
     &mpeg4p2_caps
 };
+
+static WriterCaps_t caps_h263 = {
+    "h263",
+    eVideo,
+    "V_H263",
+    VIDEO_ENCODING_H263,
+    STREAMTYPE_H263,
+    -1
+};
+
+struct Writer_s WriterVideoH263 = {
+    &reset,
+    &writeData,
+    NULL,
+    &caps_h263
+};

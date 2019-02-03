@@ -79,7 +79,6 @@ extern Writer_t WriterVideoVC1;
 extern Writer_t WriterVideoVP6;
 extern Writer_t WriterVideoVP8;
 extern Writer_t WriterVideoVP9;
-extern Writer_t WriterVideoSPARK;
 extern Writer_t WriterVideoMJPEG;
 extern Writer_t WriterFramebuffer;
 extern Writer_t WriterPipe;
