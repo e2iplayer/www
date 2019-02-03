@@ -96,13 +96,59 @@ int LinuxDvbStop(Context_t  *context, char * type);
 #define getLinuxDVBMutex() pthread_mutex_lock(&LinuxDVBmutex)
 #define releaseLinuxDVBMutex() pthread_mutex_unlock(&LinuxDVBmutex)
 
-static int LinuxDvbMapBypassMode(int bypass)
+static int LinuxDvbMapBypassMode(int bypass, bool primary)
 {
-    if (0x30 == bypass && STB_DREAMBOX == GetSTBType())
-    {
-        return 0x0f;
+    if (STB_DREAMBOX == GetSTBType()) {
+        primary = !primary;
     }
+
+    switch(bypass) {
+        case AUDIOTYPE_RAW:
+            bypass = primary ? 0x30 : 0xf;
+            break;
+        case AUDIOTYPE_AC3_PLUS:
+            bypass = primary ? 0x22 : 7;
+            break;
+        case AUDIOTYPE_WMA:
+            bypass = primary ? 0x20 : 0xd;
+            break;
+        case AUDIOTYPE_WMA_PRO:
+            bypass = primary ? 0x21 : 0xe;
+            break;
+        default:
+            break;
+    };
+
     return bypass;
+}
+
+static int LinuxDvbMapStreamType(int streamtype, bool primary)
+{
+    if (STB_DREAMBOX == GetSTBType()) {
+        primary = !primary;
+    }
+
+    switch(streamtype) {
+        case STREAMTYPE_MPEG4_H265:
+            streamtype = primary ? 7 : 22;
+            break;
+        case STREAMTYPE_VC1:
+            streamtype = primary ? 3 : 16;
+            break;
+        case STREAMTYPE_VC1_SM:
+            streamtype = primary ? 5 : 17;
+            break;
+        case STREAMTYPE_VB8:
+            streamtype = primary ? 8 : 20;
+            break;
+        case STREAMTYPE_VB9:
+            streamtype = primary ? 9 : 23;
+            break;
+        default:
+            break;
+    };
+
+    return streamtype;
 }
 
 int LinuxDvbOpen(Context_t  *context __attribute__((unused)), char *type)
@@ -229,7 +275,9 @@ int LinuxDvbPlay(Context_t  *context, char *type) {
         else
         {
             linuxdvb_printf(20, "found writer %s for encoding %s\n", writer->caps->name, Encoding);
-            if (ioctl( videofd, VIDEO_SET_STREAMTYPE, writer->caps->dvbStreamType) == -1)
+            ret = ioctl( videofd, VIDEO_SET_STREAMTYPE, LinuxDvbMapStreamType(writer->caps->dvbStreamType, true));
+            if (ret < 0) ret = ioctl( videofd, VIDEO_SET_STREAMTYPE, LinuxDvbMapStreamType(writer->caps->dvbStreamType, false));
+            if (ret < 0)
             {
                 linuxdvb_err("VIDEO_SET_STREAMTYPE: ERROR %d, %s\n", errno, strerror(errno));
                 ret = cERR_LINUXDVB_ERROR;
@@ -269,7 +317,9 @@ int LinuxDvbPlay(Context_t  *context, char *type) {
         else
         {
             linuxdvb_printf(20, "found writer %s for encoding %s\n", writer->caps->name, Encoding);
-            if (ioctl( audiofd, AUDIO_SET_BYPASS_MODE, LinuxDvbMapBypassMode(writer->caps->dvbStreamType)) < 0)
+            ret = ioctl( audiofd, AUDIO_SET_BYPASS_MODE, LinuxDvbMapBypassMode(writer->caps->dvbStreamType, true));
+            if (ret < 0) ret = ioctl( audiofd, AUDIO_SET_BYPASS_MODE, LinuxDvbMapBypassMode(writer->caps->dvbStreamType, false));
+            if (ret < 0)
             {
                 linuxdvb_err("AUDIO_SET_BYPASS_MODE: ERROR %d, %s\n", errno, strerror(errno));
                 ret = cERR_LINUXDVB_ERROR;
@@ -572,6 +622,7 @@ int LinuxDvbSwitch(Context_t  *context, char *type)
     uint8_t audio = !strcmp("audio", type);
     uint8_t video = !strcmp("video", type);
     Writer_t *writer;
+    int ret = 0;
 
     linuxdvb_printf(10, "v%d a%d\n", video, audio);
 
@@ -604,7 +655,9 @@ int LinuxDvbSwitch(Context_t  *context, char *type)
                 else
                 {
                     linuxdvb_printf(10, "found writer %s for encoding %s\n", writer->caps->name, Encoding);
-                    if (ioctl( audiofd, AUDIO_SET_BYPASS_MODE, LinuxDvbMapBypassMode(writer->caps->dvbStreamType)) == -1)
+                    ret = ioctl( audiofd, AUDIO_SET_BYPASS_MODE, LinuxDvbMapBypassMode(writer->caps->dvbStreamType, true));
+                    if (ret < 0) ret = ioctl( audiofd, AUDIO_SET_BYPASS_MODE, LinuxDvbMapBypassMode(writer->caps->dvbStreamType, false));
+                    if (ret < 0)
                     {
                         linuxdvb_err("AUDIO_SET_BYPASS_MODE: ERROR %d, %s\n", errno, strerror(errno));
                     }
@@ -646,7 +699,9 @@ int LinuxDvbSwitch(Context_t  *context, char *type)
                 else
                 {
                     linuxdvb_printf(10, "found writer %s for encoding %s\n", writer->caps->name, Encoding);
-                    if (ioctl( videofd, VIDEO_SET_STREAMTYPE, writer->caps->dvbStreamType) == -1)
+                    ret = ioctl( videofd, VIDEO_SET_STREAMTYPE, LinuxDvbMapStreamType(writer->caps->dvbStreamType, true));
+                    if (ret < 0) ret = ioctl( videofd, VIDEO_SET_STREAMTYPE, LinuxDvbMapStreamType(writer->caps->dvbStreamType, false));
+                    if (ret < 0)
                     {
                         linuxdvb_err("VIDEO_SET_STREAMTYPE: ERROR %d, %s\n", errno, strerror(errno));
                     }

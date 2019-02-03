@@ -73,7 +73,7 @@ typedef enum {
 	AUDIOTYPE_WMA_PRO = 0x21,
 	AUDIOTYPE_AC3_PLUS = 0x22,
 	AUDIOTYPE_AMR = 0x23,
-	AUDIOTYPE_RAW = 0xf
+	AUDIOTYPE_RAW = 0x30
 } audio_stream_type_t;
 
 
