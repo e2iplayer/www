@@ -396,19 +396,12 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
     case AV_CODEC_ID_MP3:
         return (mp3_software_decode) ? "A_IPCM" : "A_MP3";
     case AV_CODEC_ID_AAC:
-        if (extradata_size >= 2)
-        {
+        if (extradata_size >= 2) {
             MPEG4AudioConfig m4ac;
             int off = avpriv_mpeg4audio_get_config(&m4ac, extradata, extradata_size * 8, 1);
             ffmpeg_printf(1,"aac [%d] off[%d]\n", m4ac.object_type, off);
             if (off < 0) {
                 return "A_IPCM";
-            }
-            else if (0 == m4ac.chan_config) {
-                // according to https://wiki.multimedia.cx/index.php/ADTS
-                // "MPEG-4 Channel Configuration  - in the case of 0, the channel configuration is sent via an inband PCE"
-                // we already have AAC_LATM formatter which will include PCE
-                return (aac_latm_software_decode) ? "A_IPCM" : "A_AAC_LATM";
             }
         }
         return (aac_software_decode) ? "A_IPCM" : "A_AAC";
@@ -2304,10 +2297,11 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                             ffmpeg_printf(1,"aac sample_index %d\n", sample_index);
                             ffmpeg_printf(1,"aac chan_config %d\n", chan_config);
                             
+                            int off = -1;
                             if (get_codecpar(stream)->extradata_size >= 2)
                             {
                                 MPEG4AudioConfig m4ac;
-                                int off = avpriv_mpeg4audio_get_config(&m4ac, get_codecpar(stream)->extradata, get_codecpar(stream)->extradata_size * 8, 1);
+                                off = avpriv_mpeg4audio_get_config(&m4ac, get_codecpar(stream)->extradata, get_codecpar(stream)->extradata_size * 8, 1);
                                 if (off >= 0)
                                 {
                                     object_type  = m4ac.object_type;
@@ -2324,12 +2318,27 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                             ffmpeg_printf(1,"aac sample_index %d\n", sample_index);
                             ffmpeg_printf(1,"aac chan_config %d\n", chan_config);
 
-                            
+                            if (off >= 0 && chan_config == 0) { // channel config must be send in the inband PCE
+                                track.aacbuf = malloc(AAC_HEADER_LENGTH + MAX_PCE_SIZE);
+
+                                GetBitContext gb;
+                                PutBitContext pb;
+                                init_put_bits(&pb, track.aacbuf + AAC_HEADER_LENGTH, MAX_PCE_SIZE);
+                                init_get_bits8(&gb, get_codecpar(stream)->extradata, get_codecpar(stream)->extradata_size);
+                                skip_bits_long(&gb, off + 3);
+
+                                put_bits(&pb, 3, 5); //ID_PCE
+                                track.aacbuflen = AAC_HEADER_LENGTH + (avpriv_copy_pce_data(&pb, &gb) + 3) / 8;
+                                flush_put_bits(&pb);
+                            }
+                            else {
+                                track.aacbuflen = AAC_HEADER_LENGTH;
+                                track.aacbuf = malloc(AAC_HEADER_LENGTH+1);
+                            }
+
                             // https://wiki.multimedia.cx/index.php/ADTS
                             object_type -= 1; //ADTS - profile, the MPEG-4 Audio Object Type minus 1
-                            
-                            track.aacbuflen = AAC_HEADER_LENGTH;
-                            track.aacbuf = malloc(8);
+
                             track.aacbuf[0] = 0xFF;
                             track.aacbuf[1] = 0xF1;
                             //track.aacbuf[1] |=0x8;

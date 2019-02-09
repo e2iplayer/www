@@ -41,6 +41,7 @@
 
 #include <libavutil/intreadwrite.h>
 #include "ffmpeg/latmenc.h"
+#include "ffmpeg/mpeg4audio.h"
 
 #include "stm_ioctls.h"
 #include "bcm_ioctls.h"
@@ -65,6 +66,7 @@
 /* ***************************** */
 /* Varaibles                     */
 /* ***************************** */
+static bool needInitHeader = true;
 
 /// ** AAC ADTS format **
 ///
@@ -129,6 +131,7 @@ static int reset()
         free(pLATMCtx);
         pLATMCtx = NULL;
     }
+    needInitHeader = true;
     return 0;
 }
 
@@ -197,24 +200,12 @@ static int writeDataADTS(void *_call)
     
     aac_printf(10, "\n");
 
-    if (call == NULL)
+    if (call == NULL || call->data == NULL || call->len <= 0 || call->fd < 0)
     {
         aac_err("call data is NULL...\n");
         return 0;
     }
-    
-    if ((call->data == NULL) || (call->len <= 0))
-    {
-        aac_err("parsing NULL Data. ignoring...\n");
-        return 0;
-    }
 
-    if (call->fd < 0)
-    {
-        aac_err("file pointer < 0. ignoring ...\n");
-        return 0;
-    }
-    
     if( (call->private_data && 0 == strncmp("ADTS", call->private_data, call->private_size)) || 
         HasADTSHeader(call->data, call->len) )
     {
@@ -222,22 +213,22 @@ static int writeDataADTS(void *_call)
         return _writeData(_call, 0);
     }
 
-    uint32_t PacketLength = call->len + AAC_HEADER_LENGTH;
-    uint8_t PesHeader[PES_MAX_HEADER_SIZE + AAC_HEADER_LENGTH];
+    uint32_t adtsHeaderSize = (call->private_data == NULL || needInitHeader == false) ? AAC_HEADER_LENGTH : call->private_size;
+    uint32_t PacketLength = call->len + adtsHeaderSize;
+    uint8_t PesHeader[PES_MAX_HEADER_SIZE + AAC_HEADER_LENGTH + MAX_PCE_SIZE];
     uint32_t headerSize = InsertPesHeader (PesHeader, PacketLength, MPEG_AUDIO_PES_START_CODE, call->Pts, 0);
     uint8_t *pExtraData = &PesHeader[headerSize];
-    
+
+    needInitHeader = false;
     aac_printf(10, "AudioPts %lld\n", call->Pts);
-    if (call->private_data == NULL)
-    {
+    if (call->private_data == NULL) {
         aac_printf(10, "private_data = NULL\n");
         memcpy (pExtraData, DefaultAACHeader, AAC_HEADER_LENGTH);
     }
-    else
-    {
-        memcpy (pExtraData, call->private_data, AAC_HEADER_LENGTH);
+    else {
+        memcpy (pExtraData, call->private_data, adtsHeaderSize);
     }
-    
+
     pExtraData[3] &= 0xC0;
     /* frame size over last 2 bits */
     pExtraData[3] |= (PacketLength & 0x1800) >> 11;
@@ -255,7 +246,7 @@ static int writeDataADTS(void *_call)
 
     struct iovec iov[2];
     iov[0].iov_base = PesHeader;
-    iov[0].iov_len = headerSize + AAC_HEADER_LENGTH;
+    iov[0].iov_len = headerSize + adtsHeaderSize;
     iov[1].iov_base = call->data;
     iov[1].iov_len = call->len;
     
