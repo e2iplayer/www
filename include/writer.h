@@ -59,8 +59,9 @@ extern Writer_t WriterAudioDTS;
 extern Writer_t WriterAudioWMA;
 extern Writer_t WriterAudioWMAPRO;
 extern Writer_t WriterAudioFLAC;
-extern Writer_t WriterAudioVORBIS;
 extern Writer_t WriterAudioAMR;
+extern Writer_t WriterAudioVORBIS;
+extern Writer_t WriterAudioOPUS;
 
 extern Writer_t WriterVideoMPEG1;
 extern Writer_t WriterVideoMPEG2;
@@ -82,6 +83,9 @@ extern Writer_t WriterVideoVP9;
 extern Writer_t WriterVideoMJPEG;
 extern Writer_t WriterFramebuffer;
 extern Writer_t WriterPipe;
+extern Writer_t WriterVideoRV30;
+extern Writer_t WriterVideoRV40;
+extern Writer_t WriterVideoAVS2;
 
 Writer_t* getWriter(char* encoding);
 

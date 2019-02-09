@@ -542,3 +542,21 @@
 #else
 #define mjpeg_err(...)
 #endif
+
+/*******************************************
+ * bcma
+ *******************************************/
+#define BCMA_DEBUG_LEVEL 0
+#define BCMA_SILENT
+
+#if BCMA_DEBUG_LEVEL
+#define bcma_printf(...) log_printf(BCMA_DEBUG_LEVEL, __VA_ARGS__)
+#else
+#define bcma_printf(...)
+#endif
+
+#ifndef BCMA_SILENT
+#define bcma_err(...) log_error(__VA_ARGS__)
+#else
+#define bcma_err(...)
+#endif

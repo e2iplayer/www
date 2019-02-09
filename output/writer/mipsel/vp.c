@@ -159,10 +159,6 @@ static int writeData(void *_call, bool is_vp6, bool is_vp9)
             if (wr > left)
                 wr = left;
 
-            //gst_buffer_unmap(self->pesheader_buffer, &pesheadermap);
-            //gst_buffer_map(self->pesheader_buffer, &pesheadermap, GST_MAP_WRITE);
-            //pes_header = pesheadermap.data;
-
             //PesHeader[0] = 0x00;
             //PesHeader[1] = 0x00;
             //PesHeader[2] = 0x01;
@@ -180,10 +176,6 @@ static int writeData(void *_call, bool is_vp6, bool is_vp9)
             bytes += wr;
             offs += wr;
         }
-
-        //gst_buffer_unmap(self->pesheader_buffer, &pesheadermap);
-        //gst_buffer_map(self->pesheader_buffer, &pesheadermap, GST_MAP_WRITE);
-        //pes_header = pesheadermap.data;
 
         //PesHeader[0] = 0x00;
         //PesHeader[1] = 0x00;

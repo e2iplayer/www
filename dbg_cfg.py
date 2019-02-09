@@ -32,6 +32,7 @@ debug_modules = [
 {'name':'wma',           'lvl':0, 'silent':True},
 {'name':'wmv',           'lvl':0, 'silent':True},
 {'name':'mjpeg',         'lvl':0, 'silent':True},
+{'name':'bcma',          'lvl':0, 'silent':True},
 ]
 
 lines = ['#include <stdio.h>']

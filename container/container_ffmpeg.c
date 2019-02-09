@@ -209,6 +209,10 @@ static int32_t aac_latm_software_decode = 0;
 static int32_t ac3_software_decode = 0;
 static int32_t eac3_software_decode = 0;
 static int32_t dts_software_decode = 0;
+static int32_t amr_software_decode = 1;
+static int32_t vorbis_software_decode = 1;
+static int32_t opus_software_decode = 1;
+
 static int32_t pcm_resampling = 1;
 static int32_t stereo_software_decoder = 0;
 static int32_t insert_pcm_as_lpcm = 0;
@@ -265,6 +269,21 @@ void eac3_software_decoder_set(const int32_t val)
 void dts_software_decoder_set(const int32_t val)
 {
     dts_software_decode = val;
+}
+
+void amr_software_decoder_set(const int32_t val)
+{
+    amr_software_decode = val;
+}
+
+void vorbis_software_decoder_set(const int32_t val)
+{
+    vorbis_software_decode = val;
+}
+
+void opus_software_decoder_set(const int32_t val)
+{
+    opus_software_decode = val;
 }
 
 void stereo_software_decoder_set(const int32_t val)
@@ -331,7 +350,13 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
 #endif
     case AV_CODEC_ID_RV10:
     case AV_CODEC_ID_RV20:
-        return "V_RMV";
+        return "V_RV20";
+    case AV_CODEC_ID_RV30:
+        return "V_RV30";
+    case AV_CODEC_ID_RV40:
+        return "V_RV40";
+    case AV_CODEC_ID_AVS2:
+        return "V_AVS2";
     case AV_CODEC_ID_MPEG4:
         return "V_MPEG4";
 #if LIBAVCODEC_VERSION_MAJOR < 53
@@ -340,7 +365,7 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
     case AV_CODEC_ID_MSMPEG4V1:
     case AV_CODEC_ID_MSMPEG4V2:
     case AV_CODEC_ID_MSMPEG4V3:
-        return "V_DIVX3";
+        return "V_MPEG4"; //"V_DIVX3";
     case AV_CODEC_ID_WMV1:
         *version = 1;
         return "V_WMV";
@@ -374,12 +399,17 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
             MPEG4AudioConfig m4ac;
             int off = avpriv_mpeg4audio_get_config(&m4ac, extradata, extradata_size * 8, 1);
             ffmpeg_printf(1,"aac [%d] off[%d]\n", m4ac.object_type, off);
-            if (off < 0 || 2 != m4ac.object_type)
-            {
+            if (off < 0) {
                 return "A_IPCM";
             }
+            else if (0 == m4ac.chan_config) {
+                // according to https://wiki.multimedia.cx/index.php/ADTS
+                // "MPEG-4 Channel Configuration  - in the case of 0, the channel configuration is sent via an inband PCE"
+                // we already have AAC_LATM formatter which will include PCE
+                return (aac_latm_software_decode) ? "A_IPCM" : "A_AAC_LATM";
+            }
         }
-        return (aac_software_decode) ? "A_IPCM" : "A_AAC";  
+        return (aac_software_decode) ? "A_IPCM" : "A_AAC";
     case AV_CODEC_ID_AAC_LATM:
         return (aac_latm_software_decode) ? "A_IPCM" : "A_AAC_LATM";
     case AV_CODEC_ID_AC3:
@@ -389,6 +419,7 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
     case AV_CODEC_ID_DTS:
         return (dts_software_decode) ? "A_IPCM" : "A_DTS";
     case AV_CODEC_ID_WMAV1:
+        return "A_IPCM";
     case AV_CODEC_ID_WMAV2:
             return (wma_software_decode) ? "A_IPCM" : "A_WMA";
     case AV_CODEC_ID_WMAPRO:
@@ -400,8 +431,6 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
     case AV_CODEC_ID_RA_144:
         return "A_IPCM";
     case AV_CODEC_ID_RA_288:
-        return "A_IPCM";
-    case AV_CODEC_ID_VORBIS:
         return "A_IPCM";
     case AV_CODEC_ID_FLAC:
         return "A_IPCM";
@@ -421,7 +450,12 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
     case AV_CODEC_ID_PCM_U32BE:
         return pcm_resampling ? "A_IPCM" : "A_PCM";
     case AV_CODEC_ID_AMR_NB:
-        return "A_IPCM";//return "A_AMR";
+    case AV_CODEC_ID_AMR_WB:
+        return amr_software_decode ? "A_IPCM" : "A_AMR";
+    case AV_CODEC_ID_VORBIS:
+        return vorbis_software_decode ? "A_IPCM" : "A_VORBIS";
+    case AV_CODEC_ID_OPUS :
+        return opus_software_decode ? "A_IPCM" : "A_OPUS";
 
 /* In exteplayer3 embedded text subtitle simple printed
  * to output like other data.  Maybe worth to consider is to use 
@@ -900,7 +934,10 @@ static void FFMPEGThread(Context_t *context)
                 pcmExtradata.bits_per_coded_sample = get_codecpar(audioTrack->stream)->bits_per_coded_sample;
                 pcmExtradata.sample_rate           = get_codecpar(audioTrack->stream)->sample_rate;
                 pcmExtradata.bit_rate              = get_codecpar(audioTrack->stream)->bit_rate;
-                pcmExtradata.ffmpeg_codec_id       = get_codecpar(audioTrack->stream)->codec_id;
+                pcmExtradata.block_align           = get_codecpar(audioTrack->stream)->block_align;
+                pcmExtradata.frame_size            = get_codecpar(audioTrack->stream)->frame_size;
+
+                pcmExtradata.codec_id              = get_codecpar(audioTrack->stream)->codec_id;
                 pcmExtradata.bResampling           = restart_audio_resampling;
                 
                 uint8_t *pAudioExtradata    = get_codecpar(audioTrack->stream)->extradata;
@@ -1099,9 +1136,9 @@ static void FFMPEGThread(Context_t *context)
                         pcmExtradata.sample_rate           = out_sample_rate;
                         // The data described by the sample format is always in native-endian order
 #ifdef WORDS_BIGENDIAN
-                        pcmExtradata.ffmpeg_codec_id       = AV_CODEC_ID_PCM_S16BE;
+                        pcmExtradata.codec_id       = AV_CODEC_ID_PCM_S16BE;
 #else
-                        pcmExtradata.ffmpeg_codec_id       = AV_CODEC_ID_PCM_S16LE;
+                        pcmExtradata.codec_id       = AV_CODEC_ID_PCM_S16LE;
 #endif
 
                         //////////////////////////////////////////////////////////////////////
@@ -1144,6 +1181,27 @@ static void FFMPEGThread(Context_t *context)
                     if (!context->playback->BackWard && Write(context->output->audio->Write, context, &avOut, pts) < 0)
                     {
                         ffmpeg_err("(aac) writing data to audio device failed\n");
+                    }
+                } 
+                else if (pcmExtradata.codec_id == AV_CODEC_ID_VORBIS || pcmExtradata.codec_id == AV_CODEC_ID_OPUS ||
+                         pcmExtradata.codec_id == AV_CODEC_ID_WMAV1 || pcmExtradata.codec_id == AV_CODEC_ID_WMAV2 ||
+                         pcmExtradata.codec_id == AV_CODEC_ID_WMAPRO || pcmExtradata.codec_id == AV_CODEC_ID_WMALOSSLESS) {
+                    avOut.data       = packet.data;
+                    avOut.len        = packet.size;
+                    avOut.pts        = pts;
+                    avOut.extradata  = (uint8_t *) &pcmExtradata;
+                    avOut.extralen   = sizeof(pcmExtradata);
+                    avOut.frameRate  = 0;
+                    avOut.timeScale  = 0;
+                    avOut.width      = 0;
+                    avOut.height     = 0;
+                    avOut.type       = "audio";
+
+                    pcmExtradata.private_data = pAudioExtradata;
+                    pcmExtradata.private_size = audioExtradataSize;
+
+                    if (!context->playback->BackWard && Write(context->output->audio->Write, context, &avOut, pts) < 0) {
+                        ffmpeg_err("writing data to audio device failed\n");
                     }
                 }
                 else
@@ -2239,7 +2297,7 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
 
                             int32_t object_type = 2; // LC
                             int32_t sample_index = aac_get_sample_rate_index(get_codecpar(stream)->sample_rate);
-                            int32_t chan_config = get_codecpar(stream)->channels - 1;
+                            int32_t chan_config = get_chan_config(get_codecpar(stream)->channels);
                             ffmpeg_printf(1,"aac object_type %d\n", object_type);
                             ffmpeg_printf(1,"aac sample_index %d\n", sample_index);
                             ffmpeg_printf(1,"aac chan_config %d\n", chan_config);
@@ -2292,44 +2350,34 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                         */
 
                     }
+#ifdef __sh__
                     else if(get_codecpar(stream)->codec_id == AV_CODEC_ID_WMAV1
                         || get_codecpar(stream)->codec_id == AV_CODEC_ID_WMAV2
                         || get_codecpar(stream)->codec_id == AV_CODEC_ID_WMAPRO
                         || get_codecpar(stream)->codec_id == AV_CODEC_ID_WMALOSSLESS) //if (get_codecpar(stream)->extradata_size > 0)
                     {
                         ffmpeg_printf(10,"Create WMA ExtraData\n");
-                        uint16_t channels = get_codecpar(stream)->channels;
-                        uint32_t rate = get_codecpar(stream)->sample_rate;
-                        uint32_t bitrate = get_codecpar(stream)->bit_rate;
-                        uint16_t block_align = get_codecpar(stream)->block_align;
-                        uint16_t depth = get_codecpar(stream)->bits_per_coded_sample;
-                        uint32_t codec_data_size = get_codecpar(stream)->extradata_size;
-                        uint8_t *codec_data_pointer = get_codecpar(stream)->extradata;
-                        
+
                         // type_specific_data
-                        #define WMA_VERSION_1           0x160
-                        #define WMA_VERSION_2_9         0x161
-                        #define WMA_VERSION_9_PRO       0x162
-                        #define WMA_LOSSLESS            0x163
                         uint16_t codec_id = 0;
                         switch(get_codecpar(stream)->codec_id)
                         {
                             //TODO: What code for lossless ?
                             case AV_CODEC_ID_WMALOSSLESS:
-                                codec_id = WMA_LOSSLESS;
+                                codec_id = 0x163; // WMA_LOSSLESS
                                 break;
                             case AV_CODEC_ID_WMAPRO:
-                                codec_id = WMA_VERSION_9_PRO;
+                                codec_id = 0x162; // WMA_VERSION_9_PRO
                                 break;
                             case AV_CODEC_ID_WMAV2:
-                                codec_id = WMA_VERSION_2_9 ;
+                                codec_id = 0x161; // WMA_VERSION_2_9
                                 break;
                             case AV_CODEC_ID_WMAV1:
                             default:
-                                codec_id = WMA_VERSION_1;
+                                codec_id = 0x160; // WMA_VERSION_1
                                 break;
                         }
-#ifdef __sh__
+                        
                         track.aacbuflen = 104 + get_codecpar(stream)->extradata_size;
                         track.aacbuf = malloc(track.aacbuflen);
                         memset (track.aacbuf, 0, track.aacbuflen);
@@ -2397,49 +2445,11 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                         memcpy(track.aacbuf + 94, &get_codecpar(stream)->extradata_size, 2); //bits_per_sample
 
                         memcpy(track.aacbuf + 96, get_codecpar(stream)->extradata, get_codecpar(stream)->extradata_size);
-#else
-                        track.aacbuflen = 18 + get_codecpar(stream)->extradata_size;
-                        track.aacbuf = malloc(track.aacbuflen);
-                        memset (track.aacbuf, 0, track.aacbuflen);
-                        
-                        uint8_t *data = track.aacbuf;
-                        /* codec tag */
-                        *(data++) = codec_id & 0xff;
-                        *(data++) = (codec_id >> 8) & 0xff;
-                        /* channels */
-                        *(data++) = channels & 0xff;
-                        *(data++) = (channels >> 8) & 0xff;
-                        /* sample rate */
-                        *(data++) = rate & 0xff;
-                        *(data++) = (rate >> 8) & 0xff;
-                        *(data++) = (rate >> 16) & 0xff;
-                        *(data++) = (rate >> 24) & 0xff;
-                        /* byte rate */
-                        bitrate /= 8;
-                        *(data++) = bitrate & 0xff;
-                        *(data++) = (bitrate >> 8) & 0xff;
-                        *(data++) = (bitrate >> 16) & 0xff;
-                        *(data++) = (bitrate >> 24) & 0xff;
-                        /* block align */
-                        *(data++) = block_align & 0xff;
-                        *(data++) = (block_align >> 8) & 0xff;
-                        /* word size */
-                        *(data++) = depth & 0xff;
-                        *(data++) = (depth >> 8) & 0xff;
-                        /* codec data size */
-                        *(data++) = codec_data_size & 0xff;
-                        *(data++) = (codec_data_size >> 8) & 0xff;
-                        memcpy(data, codec_data_pointer, codec_data_size);
-#endif
+
                         ffmpeg_printf(1, "aacbuf:\n");
-                        //Hexdump(track.aacbuf, track.aacbuflen);
-
-                        //ffmpeg_printf(1, "priv_data:\n");
-                        //Hexdump(get_codecpar(stream)->priv_data, track.aacbuflen);
-
                         track.have_aacheader = 1;
                     }
-                    
+#endif
                     if (context->manager->audio)
                     {
                         ffmpeg_printf(1, "cAVIdx[%d]: MANAGER_ADD track AUDIO\n", cAVIdx);
@@ -3179,7 +3189,7 @@ static int32_t Command(void  *_context, ContainerCmd_t command, void *argument)
     return ret;
 }
 
-static char *FFMPEG_Capabilities[] = {"aac", "avi", "mkv", "mp4", "ts", "mov", "flv", "flac", "mp3", "mpg", "m2ts", "vob", "evo", "wmv","wma", "asf", "mp2", "m4v", "m4a", "fla", "divx", "dat", "mpeg", "trp", "mts", "vdr", "ogg", "wav", "wtv", "asx", "mvi", "png", "jpg", "ra", "ram", "rm", "3gp", "amr", "webm", "m3u8", "mpd", NULL };
+static char *FFMPEG_Capabilities[] = {"aac", "avi", "mkv", "mp4", "ts", "mov", "flv", "flac", "mp3", "mpg", "m2ts", "vob", "evo", "wmv","wma", "asf", "mp2", "m4v", "m4a", "fla", "divx", "dat", "mpeg", "trp", "mts", "vdr", "ogg", "wav", "wtv", "asx", "mvi", "png", "jpg", "jpeg", "ra", "ram", "rm", "3gp", "amr", "rmvb", "rm", "webm", "opus", "m3u8", "mpd", NULL };
 
 Container_t FFMPEGContainer = {
     "FFMPEG",

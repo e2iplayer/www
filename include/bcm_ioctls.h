@@ -51,12 +51,13 @@ typedef enum {
 	STREAMTYPE_DIVX311 = 13,
 	STREAMTYPE_DIVX4 = 14,
 	STREAMTYPE_DIVX5 = 15,
-	STREAMTYPE_VB6 = 18,
+	STREAMTYPE_VB6 = 18, /* 17 is also valid for ZGEMMA STBs*/
 	STREAMTYPE_SPARK = 21,
 	STREAMTYPE_MJPEG = 30,
+	STREAMTYPE_RV30 = 31,  /* rv30: RealVideo 8, suspected to based largely on an early draft of H.264 (included with RealPlayer 8)*/
+	STREAMTYPE_RV40 = 32, /* RealVideo 9, RealVideo 10*/
+	STREAMTYPE_AVS2 = 40,
 } video_stream_type_t;
-
-
 
 typedef enum {
 	AUDIOTYPE_UNKNOWN = -1,
@@ -73,6 +74,8 @@ typedef enum {
 	AUDIOTYPE_WMA_PRO = 0x21,
 	AUDIOTYPE_AC3_PLUS = 0x22,
 	AUDIOTYPE_AMR = 0x23,
+	AUDIOTYPE_OPUS = 0x24,
+	AUDIOTYPE_VORBIS = 0x25,
 	AUDIOTYPE_RAW = 0x30
 } audio_stream_type_t;
 

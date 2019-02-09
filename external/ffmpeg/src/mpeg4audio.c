@@ -78,6 +78,19 @@ static inline int get_sample_rate(GetBitContext *gb, int *index)
         avpriv_mpeg4audio_sample_rates[*index];
 }
 
+uint8_t get_chan_config(int channels)
+{
+    uint8_t chan_config = 0;
+    int i;
+    for (i=0; i<FF_ARRAY_ELEMS(ff_mpeg4audio_channels); i++) {
+        if (channels == ff_mpeg4audio_channels[i]) {
+            chan_config = i;
+            break;
+        }
+    }
+    return chan_config;
+}
+
 int avpriv_mpeg4audio_get_config(MPEG4AudioConfig *c, const uint8_t *buf,
                                  int bit_size, int sync_extension)
 {

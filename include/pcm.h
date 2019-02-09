@@ -31,6 +31,13 @@ typedef struct pcmPrivateData_s
     int32_t bits_per_coded_sample;
     int32_t sample_rate;
     int32_t bit_rate;
-    int32_t ffmpeg_codec_id;    
+
+    int32_t block_align;
+    int32_t frame_size;
+
+    int32_t codec_id;
+
+    uint8_t *private_data;
+    uint32_t private_size;
 } pcmPrivateData_t;
 #endif

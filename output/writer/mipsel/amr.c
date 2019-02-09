@@ -75,61 +75,46 @@ static int reset()
     return 0;
 }
 
-static int writeData(void* _call)
+static int writeData(void *_call)
 {
     WriterAVCallData_t* call = (WriterAVCallData_t*) _call;
 
-    unsigned char  PesHeader[PES_MAX_HEADER_SIZE + 4 + 9];
+    uint8_t PesHeader[PES_MAX_HEADER_SIZE + 4 + 9];
 
     amr_printf(10, "\n");
 
-    if (call == NULL)
-    {
-        amr_err("call data is NULL...\n");
+    if (call == NULL || call->data == NULL || call->len <= 0 || call->fd < 0) {
+        amr_err("call error wrong data call: %p, data: %p, len: %d, fd: %d\n", call, call->data, call->len, call->fd);
         return 0;
     }
-
+    
     amr_printf(10, "AudioPts %lld\n", call->Pts);
 
-    if ((call->data == NULL) || (call->len <= 0))
-    {
-        amr_err("parsing NULL Data. ignoring...\n");
-        return 0;
-    }
-
-    if (call->fd < 0)
-    {
-        amr_err("file pointer < 0. ignoring ...\n");
-        return 0;
-    }
-
-    uint8_t hasCodecData = 1;
+    size_t payload_len = call->len;
+    bool hasCodecData = true;
     if(NULL != call->private_data && call->private_size >= 17)
     {
         amr_err("wrong private_data. ignoring ...\n");
-        hasCodecData = 1;
+        hasCodecData = false;
     }
-    size_t payload_len = call->len;
-    if(hasCodecData)
-    {
+
+    if(hasCodecData) {
         payload_len += 9;
     }
+
     payload_len += 4;
-    
+
     uint32_t headerSize = InsertPesHeader(PesHeader, payload_len, MPEG_AUDIO_PES_START_CODE, call->Pts, 0);
+
     PesHeader[headerSize++] = (payload_len >> 24) & 0xff;
     PesHeader[headerSize++] = (payload_len >> 16) & 0xff;
     PesHeader[headerSize++] = (payload_len >> 8)  & 0xff;
     PesHeader[headerSize++] = payload_len & 0xff;
-    
-    if(hasCodecData)
-    {
-        uint8_t tmp[] = {0x45, 0x4d, 0x50, 0x20, 0x00, 0x00, 0x80, 0x00, 0x01};
-        memcpy(&PesHeader[headerSize], tmp, 9);
-        //memcpy(&PesHeader[headerSize], call->private_data + 8, 9);
-        //memset(&PesHeader[headerSize], 0, 9);
+
+    if (hasCodecData) {
+        memcpy(&PesHeader[headerSize], call->private_data + 8, 9);
     }
-    
+
     struct iovec iov[2];
     iov[0].iov_base = PesHeader;
     iov[0].iov_len = headerSize;

@@ -195,7 +195,7 @@ static int32_t writeData(void *_call)
 
     if (initialHeader)
     {
-        uint32_t codecID = (uint32_t)pcmPrivateData->ffmpeg_codec_id;
+        uint32_t codecID = (uint32_t)pcmPrivateData->codec_id;
         uint8_t LE = 0;
         switch (codecID)
         {

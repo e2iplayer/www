@@ -82,25 +82,12 @@ static int writeData(void* _call)
 
     mp3_printf(10, "\n");
 
-    if (call == NULL)
-    {
-        mp3_err("call data is NULL...\n");
+    if (call == NULL || call->data == NULL || call->len <= 0 || call->fd < 0) {
+        wma_err("Wrong input call: %p, data: %p, len: %d, fd: %d\n", call, call->data, call->len, call->fd);
         return 0;
     }
 
     mp3_printf(10, "AudioPts %lld\n", call->Pts);
-
-    if ((call->data == NULL) || (call->len <= 0))
-    {
-        mp3_err("parsing NULL Data. ignoring...\n");
-        return 0;
-    }
-
-    if (call->fd < 0)
-    {
-        mp3_err("file pointer < 0. ignoring ...\n");
-        return 0;
-    }
 
     call->private_size = 0;
     
@@ -157,20 +144,3 @@ struct Writer_s WriterAudioMPEGL3 = {
     NULL,
     &caps_mpegl3
 };
-
-static WriterCaps_t caps_vorbis = {
-    "vorbis",
-    eAudio,
-    "A_VORBIS",
-    AUDIO_ENCODING_VORBIS,
-    AUDIO_ENCODING_MP3,
-    -1
-};
-
-struct Writer_s WriterAudioVORBIS = {
-    &reset,
-    &writeData,
-    NULL,
-    &caps_vorbis
-};
-

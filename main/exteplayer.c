@@ -54,6 +54,10 @@ extern void       wma_software_decoder_set(const int32_t val);
 extern void       ac3_software_decoder_set(const int32_t val);
 extern void      eac3_software_decoder_set(const int32_t val);
 extern void       mp3_software_decoder_set(const int32_t val);
+extern void       amr_software_decoder_set(const int32_t val);
+extern void    vorbis_software_decoder_set(const int32_t val);
+extern void      opus_software_decoder_set(const int32_t val);
+
 extern void            rtmp_proto_impl_set(const int32_t val);
 extern void        flv2mpeg4_converter_set(const int32_t val);
 extern void        sel_program_id_set(const int32_t val);
@@ -379,7 +383,7 @@ static int ParseParams(int argc,char* argv[], PlayFiles_t *playbackFiles, int *p
     int digit_optind = 0;
     int aopt = 0, bopt = 0;
     char *copt = 0, *dopt = 0;
-    while ( (c = getopt(argc, argv, "we3dlsrimva:n:x:u:c:h:o:p:P:t:9:0:1:4:f:b:F:S:O:")) != -1) 
+    while ( (c = getopt(argc, argv, "A:V:U:we3dlsrimva:n:x:u:c:h:o:p:P:t:9:0:1:4:f:b:F:S:O:")) != -1) 
     {
         switch (c) 
         {
@@ -394,6 +398,18 @@ static int ParseParams(int argc,char* argv[], PlayFiles_t *playbackFiles, int *p
         case 'e':
             printf("Software decoder will be used for EAC3 codec\n");
             eac3_software_decoder_set(1);
+            break;
+        case 'A':
+            printf("Software decoder will be used for AMR codec\n");
+            amr_software_decoder_set(atoi(optarg));
+            break;
+        case 'V':
+            printf("Software decoder will be used for VORBIS codec\n");
+            vorbis_software_decoder_set(atoi(optarg));
+            break;
+        case 'U':
+            printf("Software decoder will be used for OPUS codec\n");
+            vorbis_software_decoder_set(atoi(optarg));
             break;
         case '3':
             printf("Software decoder will be used for AC3 codec\n");
@@ -556,10 +572,11 @@ int main(int argc, char* argv[])
     memset(argvBuff, '\0', sizeof(argvBuff));
     int commandRetVal = -1;
     /* inform client that we can handle additional commands */
-    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 55);
+    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 57);
 
     PlayFiles_t playbackFiles;
     memset(&playbackFiles, 0x00, sizeof(playbackFiles));
+
     if (0 != ParseParams(argc, argv, &playbackFiles, &audioTrackIdx, &subtitleTrackIdx, &linuxDvbBufferSizeMB))
     {
         printf("Usage: exteplayer3 filePath [-u user-agent] [-c cookies] [-h headers] [-p prio] [-a] [-d] [-w] [-l] [-s] [-i] [-t audioTrackId] [-9 subtitleTrackId] [-x separateAudioUri] plabackUri\n");
@@ -569,7 +586,10 @@ int main(int argc, char* argv[])
         printf("[-3] AC3 software decoding\n");
         printf("[-d] DTS software decoding\n");
         printf("[-m] MP3 software decoding\n");
-        printf("[-w] WMA1, WMA2, WMA/PRO software decoding\n");
+        printf("[-A 0|1] disable|enable AMR software decoding\n");
+        printf("[-V 0|1] disable|enable VORBIS software decoding\n");
+        printf("[-U 0|1] disable|enable AMR software decoding\n");
+        printf("[-w] WMA2, WMA/PRO software decoding\n");
         printf("[-l] software decoder use LPCM for injection (otherwise wav PCM will be used)\n");
         printf("[-s] software decoding as stereo [downmix]\n");
 #ifdef HAVE_FLV2MPEG4_CONVERTER

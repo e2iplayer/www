@@ -66,7 +66,9 @@ static Writer_t * AvailableWriter[] = {
     &WriterAudioDTS,
     &WriterAudioWMA,
     &WriterAudioWMAPRO,
-    
+    &WriterAudioOPUS,
+    &WriterAudioVORBIS,
+
     &WriterVideoH264,
     &WriterVideoH265,
     &WriterVideoH263,
@@ -81,6 +83,9 @@ static Writer_t * AvailableWriter[] = {
     &WriterVideoFLV,
     &WriterVideoWMV,
     &WriterVideoMJPEG,
+    &WriterVideoRV40,
+    &WriterVideoRV30,
+    &WriterVideoAVS2,
     NULL
 };
 
@@ -100,14 +105,6 @@ ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, void *pDVBMtx, co
     int retval = -1;
     int maxFd = pipefd > fd ? pipefd : fd;
     struct timeval tv;
-
-    static bool first = true;
-    if (first && STB_HISILICON == GetSTBType()) {
-        // workaround: playback of some files does not start 
-        //             if injection of the frist frame is to fast
-        usleep(100000);
-    }
-    first = false;
 
     while(size > 0 && 0 == PlaybackDieNow(0) && !context->playback->isSeeking)
     {

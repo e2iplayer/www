@@ -94,8 +94,6 @@ static int writeData(void* _call)
     WriterAVCallData_t* call = (WriterAVCallData_t*) _call;
 
     unsigned char  PesHeader[PES_MAX_HEADER_SIZE + 4];
-    unsigned char  Version = 5;
-    unsigned int   FakeStartCode       = (Version << 8) | PES_VERSION_FAKE_START_CODE;
 
     divx_printf(10, "\n");
 
@@ -145,7 +143,7 @@ static int writeData(void* _call)
     iov[ic].iov_base = PesHeader;
     uint32_t headerSize = 0;
     
-    if (memcmp(call->data, "\x00\x00\x01\xb6", 4))
+    if (0 != memcmp(call->data, "\x00\x00\x01\xb6", 4))
     {
         headerSize = InsertPesHeader (PesHeader, call->len+4, MPEG_VIDEO_PES_START_CODE, call->Pts, 0);
         memcpy(PesHeader + headerSize, "\x00\x00\x01\xb6", 4);
@@ -175,7 +173,7 @@ static WriterCaps_t divix3_caps = {
     "divix3",
     eVideo,
     "V_DIVX3",
-    VIDEO_ENCODING_MPEG4P2,
+    -1,
     STREAMTYPE_DIVX311,
     -1
 };

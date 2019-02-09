@@ -106,5 +106,6 @@ enum AudioObjectType {
                          ///<marker and the comment
 
 int avpriv_copy_pce_data(PutBitContext *pb, GetBitContext *gb);
+uint8_t get_chan_config(int channels);
 
 #endif /* AVCODEC_MPEG4AUDIO_H */

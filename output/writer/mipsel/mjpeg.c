@@ -60,7 +60,7 @@
 /* ***************************** */
 /* Varaibles                     */
 /* ***************************** */
-static bool must_send_header = true;
+static bool must_send_header = false;
 static uint8_t *private_data = NULL;
 static uint32_t private_size = 0;
 
@@ -75,28 +75,13 @@ static uint32_t private_size = 0;
 
 static int reset()
 {
-    must_send_header = true;
+    must_send_header = false;
     return 0;
 }
 
-static int writeData(void* _call)
+static int writeDataSimple(WriterAVCallData_t *call)
 {
-    WriterAVCallData_t* call = (WriterAVCallData_t*) _call;
-
-    static uint8_t PesHeader[PES_MAX_HEADER_SIZE];
-    int32_t len = 0;
-    uint32_t Position = 0;
-
-    mjpeg_printf(10, "\n");
-
-    if (call == NULL)
-    {
-        mjpeg_err("call data is NULL...\n");
-        return 0;
-    }
-
-    mjpeg_printf(10, "VideoPts %lld\n", call->Pts);
-
+    uint8_t PesHeader[PES_MAX_HEADER_SIZE];
     struct iovec iov[2];
 
     iov[0].iov_base = PesHeader;
@@ -106,6 +91,90 @@ static int writeData(void* _call)
     iov[1].iov_len = call->len;
 
     return call->WriteV(call->fd, iov, 2);;
+}
+
+static int writeDataBCMV(WriterAVCallData_t *call)
+{
+    uint8_t PesHeader[PES_MAX_HEADER_SIZE];
+    uint32_t pes_header_len = InsertPesHeader(PesHeader, call->len, MPEG_VIDEO_PES_START_CODE, call->Pts, 0);
+    uint32_t len = call->len + 4 + 4 + 2;
+    memcpy(PesHeader + pes_header_len, "BCMV", 4);
+    pes_header_len += 4;
+
+    PesHeader[pes_header_len++] = (len & 0xFF000000) >> 24;
+    PesHeader[pes_header_len++] = (len & 0x00FF0000) >> 16;
+    PesHeader[pes_header_len++] = (len & 0x0000FF00) >> 8;
+    PesHeader[pes_header_len++] = (len & 0x000000FF) >> 0;
+    PesHeader[pes_header_len++] = 0;
+    PesHeader[pes_header_len++] = 1;
+
+    int32_t payload_len = call->len + pes_header_len - 6;
+
+    struct iovec iov[2];
+
+    iov[0].iov_base = PesHeader;
+    iov[0].iov_len = InsertPesHeader(PesHeader, payload_len, MPEG_VIDEO_PES_START_CODE, call->Pts, 0);
+
+    iov[1].iov_base = call->data;
+    iov[1].iov_len = call->len;
+
+    if (payload_len > 0x8008)
+        payload_len = 0x8008;
+
+    int offs = 0;
+    int bytes = payload_len - 10 - 8;
+    UpdatePesHeaderPayloadSize(PesHeader, payload_len);
+    // pes header
+    if (pes_header_len != WriteExt(call->WriteV, call->fd, PesHeader, pes_header_len)) return -1;
+    if (bytes != WriteExt(call->WriteV, call->fd, call->data, bytes)) return -1;
+    
+    offs += bytes;
+
+    while (bytes < call->len)
+    {
+        int left = call->len - bytes;
+        int wr = 0x8000;
+        if (wr > left)
+            wr = left;
+
+        //PesHeader[0] = 0x00;
+        //PesHeader[1] = 0x00;
+        //PesHeader[2] = 0x01;
+        //PesHeader[3] = 0xE0;
+        PesHeader[6] = 0x81;
+        PesHeader[7] = 0x00;
+        PesHeader[8] = 0x00;
+        pes_header_len = 9;
+
+        UpdatePesHeaderPayloadSize(PesHeader, wr + 3);
+
+        if (pes_header_len != WriteExt(call->WriteV, call->fd, PesHeader, pes_header_len)) return -1;
+        if (wr != WriteExt(call->WriteV, call->fd, call->data + offs, wr)) return -1;
+
+        bytes += wr;
+        offs += wr;
+    }
+
+    return 1;
+}
+
+static int writeData(void *_call)
+{
+    mjpeg_printf(10, "\n");
+
+    WriterAVCallData_t *call = (WriterAVCallData_t *)_call;
+    if (call == NULL) {
+        mjpeg_err("call data is NULL...\n");
+        return 0;
+    }
+
+    mjpeg_printf(10, "VideoPts %lld\n", call->Pts);
+
+    if (STB_HISILICON == GetSTBType()) {
+        return writeDataSimple(_call);
+    }
+
+    return writeDataBCMV(call); 
 }
 
 /* ***************************** */
@@ -126,3 +195,55 @@ struct Writer_s WriterVideoMJPEG = {
     NULL,
     &caps
 };
+
+static WriterCaps_t capsRV30 = {
+    "rv30",
+    eVideo,
+    "V_RV30",
+    VIDEO_ENCODING_AUTO,
+    STREAMTYPE_RV30,
+    -1
+};
+
+struct Writer_s WriterVideoRV30 = {
+    &reset,
+    &writeData,
+    NULL,
+    &capsRV30
+};
+
+static WriterCaps_t capsRV40 = {
+    "rv40",
+    eVideo,
+    "V_RV40",
+    VIDEO_ENCODING_AUTO,
+    STREAMTYPE_RV40,
+    -1
+};
+
+struct Writer_s WriterVideoRV40 = {
+    &reset,
+    &writeData,
+    NULL,
+    &capsRV40
+};
+
+static WriterCaps_t capsAVS2 = {
+    "avs2",
+    eVideo,
+    "V_AVS2",
+    VIDEO_ENCODING_AUTO,
+    STREAMTYPE_AVS2,
+    -1
+};
+
+struct Writer_s WriterVideoAVS2 = {
+    &reset,
+    &writeData,
+    NULL,
+    &capsAVS2
+};
+
+
+
+
