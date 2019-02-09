@@ -516,7 +516,7 @@ static int64_t doCalcPts(int64_t start_time, const AVRational time_base, int64_t
     }
     else
     {
-        pts &= 0x01FFFFFFFF; // PES header can handle only 33 bit PTS
+        pts &= 0x01FFFFFFFFull; // PES header can handle only 33 bit PTS
     }
 
     return pts;
