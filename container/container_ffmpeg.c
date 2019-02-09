@@ -355,8 +355,10 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
         return "V_RV30";
     case AV_CODEC_ID_RV40:
         return "V_RV40";
+#if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(58, 21, 100)
     case AV_CODEC_ID_AVS2:
         return "V_AVS2";
+#endif
     case AV_CODEC_ID_MPEG4:
         return "V_MPEG4";
 #if LIBAVCODEC_VERSION_MAJOR < 53
