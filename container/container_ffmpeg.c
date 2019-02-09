@@ -403,6 +403,12 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
             if (off < 0) {
                 return "A_IPCM";
             }
+            else if (0 == m4ac.chan_config && STB_HISILICON != GetSTBType()) {
+                // according to https://wiki.multimedia.cx/index.php/ADTS
+                // "MPEG-4 Channel Configuration  - in the case of 0, the channel configuration is sent via an inband PCE"	
+                // we already have AAC_LATM formatter which will include PCE
+                return (aac_latm_software_decode) ? "A_IPCM" : "A_AAC_LATM";
+            }
         }
         return (aac_software_decode) ? "A_IPCM" : "A_AAC";
     case AV_CODEC_ID_AAC_LATM:
