@@ -1073,12 +1073,10 @@ static void FFMPEGThread(Context_t *context)
                                 }
                                 out_sample_rate = *rate ? *rate : 44100;
                             }
-                            
-                            printf(">>>>>>>>>>>>>>>>>> out_sample_rate[%d]\n", out_sample_rate);
-                            
+
                             swr = swr_alloc();
                             out_channels = c->channels;
-                            
+
                             if (c->channel_layout == 0)
                             {
                                 c->channel_layout = av_get_default_channel_layout( c->channels );
