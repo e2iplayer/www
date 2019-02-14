@@ -572,7 +572,7 @@ int main(int argc, char* argv[])
     memset(argvBuff, '\0', sizeof(argvBuff));
     int commandRetVal = -1;
     /* inform client that we can handle additional commands */
-    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 59);
+    fprintf(stderr, "{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 60);
 
     PlayFiles_t playbackFiles;
     memset(&playbackFiles, 0x00, sizeof(playbackFiles));
@@ -597,7 +597,7 @@ int main(int argc, char* argv[])
 #endif
         printf("[-i] play in infinity loop\n");
         printf("[-v] switch to live TS stream mode\n");
-        printf("[-n 0|1|2] rtmp force protocol implementation auto(0) native/ffmpeg(1) or librtmp(2)\n");        
+        printf("[-n 0|1|2] rtmp force protocol implementation auto(0) native/ffmpeg(1) or librtmp(2)\n");
         printf("[-o 0|1] set progressive download\n");
         printf("[-p value] nice value\n");
         printf("[-P value] select Program ID from multi-service stream\n");

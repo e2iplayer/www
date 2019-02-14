@@ -606,7 +606,11 @@ static void FFMPEGThread(Context_t *context)
     uint32_t cAVIdx = 0;
 
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(56, 34, 100)
+#ifdef __sh__
+    Mpeg4P2Context *mpeg4p2_context = NULL;
+#else
     Mpeg4P2Context *mpeg4p2_context = mpeg4p2_context_open();
+#endif
 #endif
 #ifdef HAVE_FLV2MPEG4_CONVERTER
     Flv2Mpeg4Context flv2mpeg4_context;
@@ -1069,6 +1073,8 @@ static void FFMPEGThread(Context_t *context)
                                 }
                                 out_sample_rate = *rate ? *rate : 44100;
                             }
+                            
+                            printf(">>>>>>>>>>>>>>>>>> out_sample_rate[%d]\n", out_sample_rate);
                             
                             swr = swr_alloc();
                             out_channels = c->channels;
