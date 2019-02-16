@@ -267,7 +267,7 @@ static WriterCaps_t caps_pcm =
     "pcm",
     eAudio,
     "A_PCM",
-    AUDIO_ENCODING_LPCMA,
+    -1,
     0x30,
     -1
 };
@@ -285,7 +285,7 @@ static WriterCaps_t caps_ipcm =
     "ipcm",
     eAudio,
     "A_IPCM",
-    AUDIO_ENCODING_LPCMA,
+    -1,
     0x30,
     -1
 };
