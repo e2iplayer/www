@@ -40,6 +40,8 @@ typedef struct PlaybackHandler_s
     uint8_t noprobe; /* hack: only minimal probing in av_find_stream_info */
     uint8_t isLoopMode;
     uint8_t isTSLiveMode;
+
+    void *stamp;
 } PlaybackHandler_t;
 
 #endif

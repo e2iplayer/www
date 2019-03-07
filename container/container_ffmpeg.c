@@ -57,14 +57,11 @@
 #include "aac.h"
 #include "pcm.h"
 #include "ffmpeg_metadata.h"
+
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
-#if (LIBAVFORMAT_VERSION_MAJOR > 57) 
-#define TS_BYTES_SEEKING 0
-#else
-#define TS_BYTES_SEEKING 1
-#endif
+
 
 /* Some STB with old kernels have problem with default 
  * read/write functions in ffmpeg which use open/read
@@ -97,6 +94,7 @@ typedef enum {RTMP_NATIVE, RTMP_LIBRTMP, RTMP_NONE} eRTMPProtoImplType;
 /* ***************************** */
 
 static pthread_mutex_t mutex;
+static pthread_mutex_t seek_mutex;
 
 static pthread_t PlayThread;
 static int32_t hasPlayThreadStarted = 0;
@@ -111,26 +109,19 @@ static int64_t latestPts = 0;
 
 static int32_t restart_audio_resampling = 0;
 
-static off_t seek_target_bytes = 0;
-static int32_t do_seek_target_bytes = 0;
-
-static int64_t seek_target_seconds = 0;
-static int8_t do_seek_target_seconds = 0;
-static int64_t prev_seek_time_sec = -1;
-
-static int32_t seek_target_flag = 0;
-
-static int32_t mutexInitialized = 0;
+static int64_t g_seek_target_seconds = 0;
+static bool g_do_seek_target_seconds = false;
+static void *g_stamp;
 
 /* ***************************** */
 /* Prototypes                    */
 /* ***************************** */
 static int32_t container_ffmpeg_seek_bytes(off_t pos);
 static int32_t container_ffmpeg_seek(Context_t *context, int64_t sec, uint8_t absolute);
-static int32_t container_ffmpeg_seek_rel(Context_t *context, off_t pos, int64_t pts, int64_t sec);
 static int32_t container_ffmpeg_get_length(Context_t *context, int64_t *length);
 static int64_t calcPts(uint32_t avContextIdx, AVStream *stream, int64_t pts);
 static int64_t doCalcPts(int64_t start_time, const AVRational time_base, int64_t pts);
+void LinuxDvbBuffSetStamp(void *stamp);
 
 /* Progressive playback means that we play local file
  * but this local file can grows up, for example 
@@ -142,19 +133,15 @@ void progressive_playback_set(int32_t val)
     progressive_playback = val;
 }
 
-static void initMutex(void)
-{
-    pthread_mutex_init(&mutex, NULL);
-    mutexInitialized = 1;
-}
-
 static void getMutex(const char *filename __attribute__((unused)), const char *function __attribute__((unused)), int32_t line)
 {
     ffmpeg_printf(100, "::%d requesting mutex\n", line);
+    static bool mutexInitialized = false;
 
     if (!mutexInitialized)
     {
-        initMutex();
+        pthread_mutex_init(&mutex, NULL);
+        mutexInitialized = true;
     }
 
     pthread_mutex_lock(&mutex);
@@ -167,6 +154,27 @@ static void releaseMutex(const char *filename __attribute__((unused)), const con
     pthread_mutex_unlock(&mutex);
 
     ffmpeg_printf(100, "::%d released mutex\n", line);
+}
+
+static void getSeekMutex()
+{
+    static bool mutexInitialized = false;
+    /* This is not perfect solution because 
+     * there could be race conditions and theoretically pthread_mutex_init
+     * could be called twice, but anyway
+     */
+    if (!mutexInitialized)
+    {
+        pthread_mutex_init(&seek_mutex, NULL);
+        mutexInitialized = true;
+    }
+
+    pthread_mutex_lock(&seek_mutex);
+}
+
+static void releaseSeekMutex() 
+{
+    pthread_mutex_unlock(&seek_mutex);
 }
 
 typedef int32_t (* Write_FN) (void  *, void *);
@@ -605,6 +613,15 @@ static void FFMPEGThread(Context_t *context)
     uint64_t out_channel_layout = AV_CH_LAYOUT_STEREO;
     uint32_t cAVIdx = 0;
 
+    // for seek
+    int64_t seek_target_seconds = 0;
+    bool do_seek_target_seconds = false;
+
+    int64_t seek_target_bytes = 0;
+    bool do_seek_target_bytes = false;
+    int64_t prev_seek_time_sec = -1;
+    void *stamp;
+
 #if LIBAVCODEC_VERSION_INT >= AV_VERSION_INT(56, 34, 100)
 #ifdef __sh__
     Mpeg4P2Context *mpeg4p2_context = NULL;
@@ -623,12 +640,10 @@ static void FFMPEGThread(Context_t *context)
         usleep(1000);
     }
     ffmpeg_printf(10, "Running!\n");
-    
-#ifdef __sh__
+
     uint32_t bufferSize = 0;
     context->output->Command(context, OUTPUT_GET_BUFFER_SIZE, &bufferSize);
     ffmpeg_printf(10, "bufferSize [%u]\n", bufferSize);
-#endif
 
     int8_t isWaitingForFinish = 0;
     while ( context && context->playback && context->playback->isPlaying ) 
@@ -637,11 +652,11 @@ static void FFMPEGThread(Context_t *context)
          * we will not wait here because we can still fill 
          * DVB drivers buffers at PAUSE time
          * 
-         * In the future we can add buffering queue before injection in to 
-         * AUDIO, VIDEO decoders, so we can not wait here
          */
 #ifdef __sh__
-        //IF MOVIE IS PAUSED, WAIT
+        /* ST DVB drivers skip data if they are written during pause 
+         * so, we must wait here if there is not buffering queue
+         */
         if (0 == bufferSize && context->playback->isPaused) 
         {
             ffmpeg_printf(20, "paused\n");
@@ -670,6 +685,16 @@ static void FFMPEGThread(Context_t *context)
             }
             continue;
         }
+
+        getSeekMutex();
+        if (g_do_seek_target_seconds) 
+        {
+            do_seek_target_seconds = g_do_seek_target_seconds;
+            seek_target_seconds = g_seek_target_seconds;
+            stamp = g_stamp;
+            g_do_seek_target_seconds = false;
+        }
+        releaseSeekMutex();
 
         if (do_seek_target_seconds || do_seek_target_bytes) 
         {
@@ -700,19 +725,24 @@ static void FFMPEGThread(Context_t *context)
                     }
                 }
                 reset_finish_timeout();
+                /*
+                if (bufferSize > 0)
+                {
+                    context->output->Command(context, OUTPUT_CLEAR, NULL);
+                }
+                */
             } 
             else
             {
                 container_ffmpeg_seek_bytes(seek_target_bytes);
             }
-            do_seek_target_seconds = 0;
-            do_seek_target_bytes = 0;
+            do_seek_target_seconds = false;
+            do_seek_target_bytes = false;
             
             restart_audio_resampling = 1;
             currentVideoPts = -1;
             currentAudioPts = -1;
             latestPts = 0;
-            seek_target_flag = 0;
 
             // flush streams
             uint32_t i = 0;
@@ -767,7 +797,11 @@ static void FFMPEGThread(Context_t *context)
                 cAVIdx = 0;
             }
         }
-        
+
+        if (bufferSize > 0)
+        {
+            LinuxDvbBuffSetStamp(stamp);
+        }
         if (!isWaitingForFinish && (ffmpegStatus = av_read_frame(avContextTab[cAVIdx], &packet)) == 0 )
         {
             int64_t pts = 0;
@@ -1296,7 +1330,7 @@ static void FFMPEGThread(Context_t *context)
                 if (context->playback->isTSLiveMode)
                 {
                     seek_target_bytes = 0;
-                    do_seek_target_bytes = 1;
+                    do_seek_target_bytes = true;
                     bEndProcess = 0;
                 }
                 else if( 1 == context->playback->isLoopMode )
@@ -1304,18 +1338,9 @@ static void FFMPEGThread(Context_t *context)
                     int64_t tmpLength = 0;
                     if( 0 == container_ffmpeg_get_length(context, &tmpLength) && tmpLength > 0 && get_play_pts() > 0)
                     {
-#if defined(TS_BYTES_SEEKING) && TS_BYTES_SEEKING
-                        if (avContextTab[0]->iformat->flags & AVFMT_TS_DISCONT)
-                        {
-                            seek_target_bytes = 0;
-                            do_seek_target_bytes = 1;
-                        }
-                        else
-#endif
-                        {
-                            seek_target_seconds = 0;
-                            do_seek_target_seconds = 1;
-                        }
+                        seek_target_seconds = 0;
+                        do_seek_target_seconds = 1;
+
                         bEndProcess = 0;
                         context->output->Command(context, OUTPUT_CLEAR, NULL);
                         context->output->Command(context, OUTPUT_PLAY, NULL);
@@ -2743,105 +2768,11 @@ static int32_t container_ffmpeg_seek_bytes(off_t pos)
     return cERR_CONTAINER_FFMPEG_NO_ERROR;
 }
 
-/* seeking relative to a given byteposition N seconds ->for reverse playback needed */
-static int32_t container_ffmpeg_seek_rel(Context_t *context, off_t pos, int64_t pts, int64_t sec) 
-{
-    Track_t *videoTrack = NULL;
-    Track_t *audioTrack = NULL;
-    Track_t *current = NULL;
-    seek_target_flag = 0;
-
-    ffmpeg_printf(10, "seeking %"PRId64" sec relativ to %"PRId64"\n", sec, pos);
-
-    context->manager->video->Command(context, MANAGER_GET_TRACK, &videoTrack);
-    context->manager->audio->Command(context, MANAGER_GET_TRACK, &audioTrack);
-
-    if (videoTrack != NULL)
-    {
-        current = videoTrack;
-    }
-    else if (audioTrack != NULL)
-    {
-        current = audioTrack;
-    }
-    
-    if (current == NULL) 
-    {
-        ffmpeg_err( "no track avaibale to seek\n");
-        return cERR_CONTAINER_FFMPEG_ERR;
-    }
-
-    if (pos == -1)
-    {
-        pos = avio_tell(avContextTab[0]->pb);
-    }
-
-    if (pts == -1)
-    {
-        pts = current->pts;
-    }
-    
-    if (sec < 0)
-    {
-        seek_target_flag |= AVSEEK_FLAG_BACKWARD;
-    }
-
-    ffmpeg_printf(10, "iformat->flags %d\n", avContextTab[0]->iformat->flags);
-#if defined(TS_BYTES_SEEKING) && TS_BYTES_SEEKING
-    if (avContextTab[0]->iformat->flags & AVFMT_TS_DISCONT)
-    {
-        if (avContextTab[0]->bit_rate)
-        {
-            sec *= avContextTab[0]->bit_rate / 8;
-            ffmpeg_printf(10, "bit_rate %d\n", avContextTab[0]->bit_rate);
-        }
-        else
-        {
-            sec *= 180000;
-        }
-
-        pos += sec;
-
-        if (pos < 0)
-        {
-           ffmpeg_err("end of file reached\n");
-           releaseMutex(__FILE__, __FUNCTION__,__LINE__);
-           return cERR_CONTAINER_FFMPEG_END_OF_FILE;
-        }
-
-        ffmpeg_printf(10, "1. seeking to position %"PRId64" bytes ->sec %f\n", pos, sec);
-
-        seek_target_bytes = pos;
-        do_seek_target_bytes = 1;
-
-        return pos;
-    }
-    else
-#endif
-    {
-        sec += pts / 90000;
-
-        if (sec < 0)
-        {
-            sec = 0;
-        }
-
-        ffmpeg_printf(10, "2. seeking to position %"PRId64" sec ->time base %f %d\n", sec, av_q2d(((AVStream*) current->stream)->time_base), AV_TIME_BASE);
-
-        seek_target_seconds = sec * AV_TIME_BASE;
-        do_seek_target_seconds = 1;
-    }
-
-    releaseMutex(__FILE__, __FUNCTION__,__LINE__);
-    return cERR_CONTAINER_FFMPEG_NO_ERROR;
-}
-
 static int32_t container_ffmpeg_seek(Context_t *context, int64_t sec, uint8_t absolute)
 {
     Track_t *videoTrack = NULL;
     Track_t *audioTrack = NULL;
     Track_t *current = NULL;
-    seek_target_flag = 0;
 
     if (!absolute) 
     {
@@ -2887,64 +2818,17 @@ static int32_t container_ffmpeg_seek(Context_t *context, int64_t sec, uint8_t ab
         return cERR_CONTAINER_FFMPEG_ERR;
     }
 
-    if (sec < 0)
-    {
-        seek_target_flag |= AVSEEK_FLAG_BACKWARD;
-    }
-
     if (!context->playback || !context->playback->isPlaying)
     {
-        releaseMutex(__FILE__, __FUNCTION__,__LINE__);
         return cERR_CONTAINER_FFMPEG_NO_ERROR;
     }
 
-    ffmpeg_printf(10, "iformat->flags %d\n", avContextTab[0]->iformat->flags);
-#if defined(TS_BYTES_SEEKING) && TS_BYTES_SEEKING
-    if (avContextTab[0]->iformat->flags & AVFMT_TS_DISCONT)
-    {
-        /* konfetti: for ts streams seeking frame per seconds does not work (why?).
-        * I take this algo partly from ffplay.c.
-        *
-        * seeking per HTTP does still not work very good. forward seeks everytime
-        * about 10 seconds, backward does not work.
-        */
+    getSeekMutex();
+    g_seek_target_seconds = sec * AV_TIME_BASE;
+    g_do_seek_target_seconds = true;
+    g_stamp = context->playback->stamp;
+    releaseSeekMutex();
 
-        getMutex(__FILE__, __FUNCTION__,__LINE__);
-        off_t pos = avio_tell(avContextTab[0]->pb);
-        releaseMutex(__FILE__, __FUNCTION__,__LINE__);
-
-        ffmpeg_printf(10, "pos %"PRId64" %d\n", pos, avContextTab[0]->bit_rate);
-
-        if (avContextTab[0]->bit_rate)
-        {
-            sec *= avContextTab[0]->bit_rate / 8;
-            ffmpeg_printf(10, "bit_rate %d\n", avContextTab[0]->bit_rate);
-        }
-        else
-        {
-            sec *= 180000;
-        }
-        
-        pos = sec;
-        
-        if (pos < 0)
-        {
-           pos = 0;
-        }
-        
-        ffmpeg_printf(10, "1. seeking to position %"PRId64" bytes ->sec %d\n", pos, sec);
-
-        seek_target_bytes = pos;
-        do_seek_target_bytes = 1;
-
-    } 
-    else
-#endif
-    {
-        seek_target_seconds = sec * AV_TIME_BASE;
-        do_seek_target_seconds = 1;
-    }
-    
     return cERR_CONTAINER_FFMPEG_NO_ERROR;
 }
 

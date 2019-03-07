@@ -129,14 +129,14 @@ static int writeData(void* _call)
         videocodecdata.data  = malloc(videocodecdata.length);
         memset(videocodecdata.data, 0, videocodecdata.length);
         memcpy(videocodecdata.data + 8, call->private_data, call->private_size);
-        if(STB_DREAMBOX == GetSTBType() || STB_HISILICON == GetSTBType() || 0 != ioctl(call->fd, VIDEO_SET_CODEC_DATA, &videocodecdata))
+        if(STB_DREAMBOX == GetSTBType() || 0 != ioctl(call->fd, VIDEO_SET_CODEC_DATA, &videocodecdata))
         {
             iov[ic].iov_base  = videocodecdata.data;
             iov[ic++].iov_len = videocodecdata.length;
             PacketLength     += videocodecdata.length;
         }
     }
-    
+
     uint8_t needFrameStartCode = 0;
     if( sizeof(Vc1FrameStartCode) >= call->len
         || memcmp(call->data, Vc1FrameStartCode, sizeof(Vc1FrameStartCode)) != 0 )
