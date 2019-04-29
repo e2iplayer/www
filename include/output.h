@@ -57,7 +57,10 @@ typedef struct
     uint32_t         trackId;
     uint8_t         *data;
     uint32_t         len;
-    
+
+    uint8_t         *extradata;
+    uint32_t         extralen;
+
     int64_t          pts;
     int64_t          durationMS; // duration in miliseconds
     

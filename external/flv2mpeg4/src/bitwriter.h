@@ -120,7 +120,6 @@ static void __inline flash_bw(BW* p)
 		p->buf[p->pos++] = (p->tmp >> 8 ) & 0xff;
 		break;
 	default:
-//		fprintf(stderr, "flash_bw error!(%d)\n", p->bitoffset);
 		break;
 	}
 

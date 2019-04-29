@@ -26,8 +26,6 @@ typedef struct {
     WriteV_t               WriteV;
 } WriterAVCallData_t;
 
-
-
 typedef struct WriterCaps_s {
     char*          name;
     eWriterType_t  type;
@@ -98,4 +96,26 @@ ssize_t WriteWithRetry(Context_t *context, int pipefd, int fd, void *pDVBMtx, co
 void FlushPipe(int pipefd);
 
 ssize_t WriteExt(WriteV_t _call, int fd, void *data, size_t size);
+
+// Subtitles
+typedef struct {
+    uint32_t  trackId;
+    uint8_t   *data;
+    uint32_t  len;
+    int64_t   pts;
+    int64_t   dts;
+    uint8_t   *private_data;
+    uint32_t  private_size;
+    int64_t   durationMS; // duration in miliseconds
+} WriterSubCallData_t;
+
+typedef struct SubWriter_s {
+    int32_t           (* open) ();
+    int32_t           (* close) ();
+    int32_t           (* reset) ();
+    int32_t           (* write) (WriterSubCallData_t *);
+} SubWriter_t;
+
+extern SubWriter_t WriterSubPGS;
+
 #endif

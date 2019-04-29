@@ -560,3 +560,21 @@
 #else
 #define bcma_err(...)
 #endif
+
+/*******************************************
+ * plugin
+ *******************************************/
+#define PLUGIN_DEBUG_LEVEL 0
+#define PLUGIN_SILENT
+
+#if PLUGIN_DEBUG_LEVEL
+#define plugin_printf(...) log_printf(PLUGIN_DEBUG_LEVEL, __VA_ARGS__)
+#else
+#define plugin_printf(...)
+#endif
+
+#ifndef PLUGIN_SILENT
+#define plugin_err(...) log_error(__VA_ARGS__)
+#else
+#define plugin_err(...)
+#endif

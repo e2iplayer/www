@@ -73,6 +73,8 @@ bool isBufferedOutput = false;
 
 pthread_mutex_t LinuxDVBmutex;
 
+static int64_t last_pts = 0;
+
 /* ***************************** */
 /* Prototypes                    */
 /* ***************************** */
@@ -195,7 +197,7 @@ int LinuxDvbClear(Context_t  *context __attribute__((unused)), char *type)
 
 int LinuxDvbPts(Context_t  *context __attribute__((unused)), unsigned long long int* pts)
 {
-    *((unsigned long long int *)pts)=(unsigned long long int)0;
+    *((unsigned long long int *)pts)=(unsigned long long int)last_pts;
     return 0;
 }
 
@@ -298,6 +300,16 @@ static int Write(void  *_context, void *_out)
                         linuxdvb_err("unhandled DVBAPI Video Event %d\n", evt.type);
                     }
                 }
+            }
+
+            if (out->pts != INVALID_PTS_VALUE)
+            {
+                if (out->pts > last_pts)
+                {
+                    //usleep((out->pts - last_pts) / 90 * 1000);
+                    //usleep((out->pts - last_pts) / 90 * 500);
+                }
+                last_pts = out->pts;
             }
 
             call.fd           = videofd;

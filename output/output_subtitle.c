@@ -37,6 +37,7 @@
 #include "common.h"
 #include "debug.h"
 #include "output.h"
+#include "writer.h"
 
 /* ***************************** */
 /* Makros/Constants              */
@@ -66,9 +67,9 @@ Number, Style, Name,, MarginL, MarginR, MarginV, Effect,, Text
 /* ***************************** */
 /* Varaibles                     */
 /* ***************************** */
-
 static pthread_mutex_t mutex;
 static int isSubtitleOpened = 0;
+static SubWriter_t *g_subWriter;
 
 /* ***************************** */
 /* Prototypes                    */
@@ -167,8 +168,11 @@ static char * json_string_escape(char *str)
 }
 
 static int Flush()
-{   
-    fprintf(stderr, "{\"s_f\":{\"r\":0}}\n");
+{
+    if (g_subWriter)
+        g_subWriter->reset();
+
+    E2iSendMsg("{\"s_f\":{\"r\":0}}\n");
     return cERR_SUBTITLE_NO_ERROR;
 }
 
@@ -188,10 +192,16 @@ static int Write(void *_context, void *data)
     }
 
     out = (SubtitleOut_t*) data;
-    
+
     context->manager->subtitle->Command(context, MANAGER_GET, &curtrackid);
     if (curtrackid != out->trackId)
     {
+        if (g_subWriter)
+        {
+            g_subWriter = NULL;
+            g_subWriter->close();
+        }
+
         Flush();
     }
     context->manager->subtitle->Command(context, MANAGER_GETENCODING, &Encoding);
@@ -201,20 +211,41 @@ static int Write(void *_context, void *data)
        subtitle_err("encoding unknown\n");
        return cERR_SUBTITLE_ERROR;
     }
-    
+
     subtitle_printf(20, "Encoding:%s Text:%s Len:%d\n", Encoding, (const char*) out->data, out->len);
 
     if(!strncmp("S_TEXT/SUBRIP", Encoding, 13))
     {
-        fprintf(stderr, "{\"s_a\":{\"id\":%d,\"s\":%"PRId64",\"e\":%"PRId64",\"t\":\"%s\"}}\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS, json_string_escape((char *)out->data));
+        E2iSendMsg("{\"s_a\":{\"id\":%d,\"s\":%"PRId64",\"e\":%"PRId64",\"t\":\"%s\"}}\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS, json_string_escape((char *)out->data));
     }
     else if (!strncmp("S_TEXT/ASS", Encoding, 10))
     {
-        fprintf(stderr, "{\"s_a\":{\"id\":%d,\"s\":%"PRId64",\"e\":%"PRId64",\"t\":\"%s\"}}\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS, ass_get_text((char *)out->data));
+        E2iSendMsg("{\"s_a\":{\"id\":%d,\"s\":%"PRId64",\"e\":%"PRId64",\"t\":\"%s\"}}\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS, ass_get_text((char *)out->data));
     }
-    else if (!strncmp("D_WEBVTT/SUBTITLES", Encoding, 18))
+    else if (!strncmp("S_TEXT/WEBVTT", Encoding, 18))
     {
-        fprintf(stderr, "{\"s_a\":{\"id\":%d,\"s\":%"PRId64",\"e\":%"PRId64",\"t\":\"%s\"}}\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS, json_string_escape((char *)out->data));
+        E2iSendMsg("{\"s_a\":{\"id\":%d,\"s\":%"PRId64",\"e\":%"PRId64",\"t\":\"%s\"}}\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS, json_string_escape((char *)out->data));
+    }
+    else if (!strncmp("S_GRAPHIC/PGS", Encoding, 13))
+    {
+        if (!g_subWriter)
+        {
+            g_subWriter = &WriterSubPGS;
+            //g_subWriter->open();
+        }
+
+        WriterSubCallData_t subPacket;
+        memset(&subPacket, 0x00, sizeof(subPacket));
+        subPacket.trackId = out->trackId;
+        subPacket.data = out->data;
+        subPacket.len = out->len;
+        subPacket.pts = out->pts;
+        //subPacket.dts = out->dts;
+        subPacket.private_data = out->extradata;
+        subPacket.private_size = out->extralen;
+        subPacket.durationMS = out->durationMS;
+
+        g_subWriter->write(&subPacket);
     }
     else
     {
@@ -255,6 +286,12 @@ static int32_t subtitle_Close(Context_t *context __attribute__((unused)))
     subtitle_printf(10, "\n");
 
     getMutex(__LINE__);
+
+    if (g_subWriter)
+    {
+        g_subWriter->close();
+        g_subWriter = NULL;
+    }
 
     isSubtitleOpened = 0;
 

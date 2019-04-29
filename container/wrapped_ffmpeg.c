@@ -142,13 +142,13 @@ static AVCodecContext *wrapped_avcodec_get_context(uint32_t cAVIdx, AVStream *st
         avCodecCtx = avcodec_alloc_context3(NULL);
         if (!avCodecCtx) 
         {
-            fprintf(stderr, "context3 alloc for stream %d failed\n", (int)stream->id);
+            ffmpeg_err("context3 alloc for stream %d failed\n", (int)stream->id);
             return NULL;
         }
 
         if (avcodec_parameters_to_context(avCodecCtx, stream->codecpar) < 0)
         {
-            fprintf(stderr, "parameters to context for stream %d failed\n", (int)stream->id);
+            ffmpeg_err("parameters to context for stream %d failed\n", (int)stream->id);
             avcodec_free_context(&avCodecCtx);
             return NULL;
         }

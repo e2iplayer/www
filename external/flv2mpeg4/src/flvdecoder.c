@@ -464,23 +464,18 @@ int decode_picture_header(BR* p, PICTURE* picture)
 	
 	if (get_bits(p, 17) != 1)
 	{
-		fprintf(stderr, "start code error\n");
 		return -1;
 	}
 	
 	tmp = get_bits(p, 5);
 	if (tmp !=0 && tmp != 1)
 	{
-		fprintf(stderr, "picture format error\n");
 		return -1;
 	}
 	
 	picture->escape_type = tmp;
 	picture->frame_number = get_bits(p, 8);
 	
-//	printf("picture_format: %d\n", tmp);
-//	printf("picture_number: %d\n", get_bits(p, 8));
-		
 	tmp = get_bits(p, 3);
 	switch (tmp)
 	{
@@ -498,7 +493,6 @@ int decode_picture_header(BR* p, PICTURE* picture)
 	case 5: width = 320, height = 240; break;
 	case 6: width = 160, height = 120; break;
 	default:
-		fprintf(stderr, "size error\n");
 		return -1;
 	}
 	

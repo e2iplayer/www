@@ -481,7 +481,6 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
     case AV_CODEC_ID_DVB_SUBTITLE:
     case AV_CODEC_ID_XSUB:
     case AV_CODEC_ID_MOV_TEXT:
-    case AV_CODEC_ID_HDMV_PGS_SUBTITLE:
     case AV_CODEC_ID_DVB_TELETEXT:
 //    case CODEC_ID_DVB_TELETEXT:
 //        return "S_TEXT/SRT"; /* fixme */
@@ -492,7 +491,9 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
     case AV_CODEC_ID_SUBRIP:
         return "S_TEXT/SUBRIP"; 
     case AV_CODEC_ID_WEBVTT:
-        return "D_WEBVTT/SUBTITLES";
+        return "S_TEXT/WEBVTT";
+    case AV_CODEC_ID_HDMV_PGS_SUBTITLE:
+        return "S_GRAPHIC/PGS";
     default:
         ffmpeg_err("Codec ID %d (%.8x) not found\n", codec_id, codec_id);
         // Default to injected-pcm for unhandled audio types.
@@ -1279,12 +1280,13 @@ static void FFMPEGThread(Context_t *context)
                     duration = (int64_t)av_rescale(get_packet_duration(&packet), (int64_t)stream->time_base.num * 1000, stream->time_base.den); 
                 }
 
-                if (duration > 0)
+                if (duration > 0 || duration == -1)
                 {
                     SubtitleOut_t subOut;
                     memset(&subOut, 0, sizeof(subOut));
                     subOut.trackId = pid;
                     subOut.data = (uint8_t *)packet.data;
+                    subOut.len = packet.size;
                     subOut.pts = pts;
                     subOut.durationMS = duration;
                     if (Write(context->output->subtitle->Write, context, &subOut, pts) < 0)
@@ -1834,7 +1836,7 @@ int32_t container_ffmpeg_init_av_context(Context_t *context, char *filename, uin
 
             ffmpeg_err("avformat_open_input failed %d (%s)\n", err, filename);
             av_strerror(err, error, 512);
-            fprintf(stderr, "{\"FF_ERROR\":{\"msg\":\"%s\",\"code\":%i}}\n", error, err);
+            E2iSendMsg("{\"FF_ERROR\":{\"msg\":\"%s\",\"code\":%i}}\n", error, err);
 
             if(avio_opts != NULL)
             {
@@ -2520,7 +2522,8 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                     get_codecpar(stream)->codec_id != AV_CODEC_ID_SUBRIP && 
                     get_codecpar(stream)->codec_id != AV_CODEC_ID_TEXT &&
                     get_codecpar(stream)->codec_id != AV_CODEC_ID_SRT &&
-                    get_codecpar(stream)->codec_id != AV_CODEC_ID_WEBVTT)
+                    get_codecpar(stream)->codec_id != AV_CODEC_ID_WEBVTT &&
+                    (get_codecpar(stream)->codec_id != AV_CODEC_ID_HDMV_PGS_SUBTITLE || !GetGraphicSubPath() || !GetGraphicSubPath()[0]))
                 {
                     ffmpeg_printf(10, "subtitle with not supported codec codec_id[%u]\n", (uint32_t)get_codecpar(stream)->codec_id);
                 }
