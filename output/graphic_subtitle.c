@@ -127,10 +127,24 @@ static int32_t Reset()
     return 0;
 }
 
-static int32_t Open(uint8_t *extradata, int extradata_size)
+static int32_t Open(SubtitleCodecId_t codecId, uint8_t *extradata, int extradata_size)
 {
+    enum AVCodecID avCodecId = AV_CODEC_ID_NONE;
     const AVCodec *codec;
-    codec = avcodec_find_decoder( AV_CODEC_ID_HDMV_PGS_SUBTITLE );
+
+    /* */
+    switch (codecId) {
+    case SUBTITLE_CODEC_ID_PGS:
+        avCodecId = AV_CODEC_ID_HDMV_PGS_SUBTITLE;
+    case SUBTITLE_CODEC_ID_DVB:
+        avCodecId = AV_CODEC_ID_DVB_SUBTITLE;
+        break;
+    default:
+        subtitle_err("unsupported subtitle codecId: %d\n", (int)codecId);
+        return -1;
+    }
+
+    codec = avcodec_find_decoder( avCodecId );
     AVCodecContext *context = avcodec_alloc_context3(codec);
 
     Reset();
@@ -200,7 +214,7 @@ static int32_t Write(WriterSubCallData_t *subPacket)
         return -1;
 
     if (!g_sys)
-        if (Open(subPacket->private_data, subPacket->private_size))
+        if (Open(subPacket->codecId, subPacket->private_data, subPacket->private_size))
             return -1;
 
     AVSubtitle subtitle;

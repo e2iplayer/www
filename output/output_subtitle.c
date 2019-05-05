@@ -214,44 +214,54 @@ static int Write(void *_context, void *data)
 
     subtitle_printf(20, "Encoding:%s Text:%s Len:%d\n", Encoding, (const char*) out->data, out->len);
 
+    SubtitleCodecId_t subCodecId = SUBTITLE_CODEC_ID_UNKNOWN;
     if(!strncmp("S_TEXT/SUBRIP", Encoding, 13))
-    {
-        E2iSendMsg("{\"s_a\":{\"id\":%d,\"s\":%"PRId64",\"e\":%"PRId64",\"t\":\"%s\"}}\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS, json_string_escape((char *)out->data));
-    }
+        subCodecId = SUBTITLE_CODEC_ID_SUBRIP;
     else if (!strncmp("S_TEXT/ASS", Encoding, 10))
-    {
-        E2iSendMsg("{\"s_a\":{\"id\":%d,\"s\":%"PRId64",\"e\":%"PRId64",\"t\":\"%s\"}}\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS, ass_get_text((char *)out->data));
-    }
+        subCodecId = SUBTITLE_CODEC_ID_ASS;
     else if (!strncmp("S_TEXT/WEBVTT", Encoding, 18))
-    {
-        E2iSendMsg("{\"s_a\":{\"id\":%d,\"s\":%"PRId64",\"e\":%"PRId64",\"t\":\"%s\"}}\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS, json_string_escape((char *)out->data));
-    }
+        subCodecId = SUBTITLE_CODEC_ID_WEBVTT;
     else if (!strncmp("S_GRAPHIC/PGS", Encoding, 13))
+        subCodecId = SUBTITLE_CODEC_ID_PGS;
+    else if (!strncmp("S_GRAPHIC/DVB", Encoding, 13))
+        subCodecId = SUBTITLE_CODEC_ID_DVB;
+
+    switch (subCodecId)
     {
-        if (!g_subWriter)
+        case SUBTITLE_CODEC_ID_SUBRIP:
+        case SUBTITLE_CODEC_ID_WEBVTT:
+            E2iSendMsg("{\"s_a\":{\"id\":%d,\"s\":%"PRId64",\"e\":%"PRId64",\"t\":\"%s\"}}\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS, json_string_escape((char *)out->data));
+        break;
+        case SUBTITLE_CODEC_ID_ASS:
+            E2iSendMsg("{\"s_a\":{\"id\":%d,\"s\":%"PRId64",\"e\":%"PRId64",\"t\":\"%s\"}}\n", out->trackId, out->pts / 90, out->pts / 90 + out->durationMS, ass_get_text((char *)out->data));
+        break;
+        case SUBTITLE_CODEC_ID_PGS:
+        case SUBTITLE_CODEC_ID_DVB:
         {
-            g_subWriter = &WriterSubPGS;
-            //g_subWriter->open();
+            if (!g_subWriter)
+            {
+                g_subWriter = &WriterSubPGS;
+                //g_subWriter->open(subCodecId, out->extradata, out->extralen);
+            }
+
+            WriterSubCallData_t subPacket;
+            memset(&subPacket, 0x00, sizeof(subPacket));
+            subPacket.codecId = subCodecId;
+            subPacket.trackId = out->trackId;
+            subPacket.data = out->data;
+            subPacket.len = out->len;
+            subPacket.pts = out->pts;
+            subPacket.dts = out->dts;
+            subPacket.private_data = out->extradata;
+            subPacket.private_size = out->extralen;
+            subPacket.durationMS = out->durationMS;
+
+            g_subWriter->write(&subPacket);
         }
-
-        WriterSubCallData_t subPacket;
-        memset(&subPacket, 0x00, sizeof(subPacket));
-        subPacket.codecId = SUBTITLE_CODEC_ID_PGS;
-        subPacket.trackId = out->trackId;
-        subPacket.data = out->data;
-        subPacket.len = out->len;
-        subPacket.pts = out->pts;
-        //subPacket.dts = out->dts;
-        subPacket.private_data = out->extradata;
-        subPacket.private_size = out->extralen;
-        subPacket.durationMS = out->durationMS;
-
-        g_subWriter->write(&subPacket);
-    }
-    else
-    {
-        subtitle_err("unknown encoding %s\n", Encoding);
-        return  cERR_SUBTITLE_ERROR;
+        break;
+        default:
+            subtitle_err("unknown encoding %s\n", Encoding);
+            return  cERR_SUBTITLE_ERROR;
     }
 
     subtitle_printf(10, "<\n");

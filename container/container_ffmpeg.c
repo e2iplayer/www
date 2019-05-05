@@ -478,7 +478,6 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
 #endif
         return "S_TEXT/ASS"; /* Hellmaster1024: seems to be ASS instead of SSA */
     case AV_CODEC_ID_DVD_SUBTITLE:
-    case AV_CODEC_ID_DVB_SUBTITLE:
     case AV_CODEC_ID_XSUB:
     case AV_CODEC_ID_MOV_TEXT:
     case AV_CODEC_ID_DVB_TELETEXT:
@@ -494,6 +493,8 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
         return "S_TEXT/WEBVTT";
     case AV_CODEC_ID_HDMV_PGS_SUBTITLE:
         return "S_GRAPHIC/PGS";
+    case AV_CODEC_ID_DVB_SUBTITLE:
+        return "S_GRAPHIC/DVB";
     default:
         ffmpeg_err("Codec ID %d (%.8x) not found\n", codec_id, codec_id);
         // Default to injected-pcm for unhandled audio types.
@@ -2523,7 +2524,9 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                     get_codecpar(stream)->codec_id != AV_CODEC_ID_TEXT &&
                     get_codecpar(stream)->codec_id != AV_CODEC_ID_SRT &&
                     get_codecpar(stream)->codec_id != AV_CODEC_ID_WEBVTT &&
-                    (get_codecpar(stream)->codec_id != AV_CODEC_ID_HDMV_PGS_SUBTITLE || !GetGraphicSubPath() || !GetGraphicSubPath()[0]))
+                    ((get_codecpar(stream)->codec_id != AV_CODEC_ID_HDMV_PGS_SUBTITLE &&
+                      get_codecpar(stream)->codec_id != AV_CODEC_ID_DVB_SUBTITLE) ||
+                     !GetGraphicSubPath() || !GetGraphicSubPath()[0]))
                 {
                     ffmpeg_printf(10, "subtitle with not supported codec codec_id[%u]\n", (uint32_t)get_codecpar(stream)->codec_id);
                 }

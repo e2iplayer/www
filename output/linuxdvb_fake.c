@@ -306,7 +306,7 @@ static int Write(void  *_context, void *_out)
             {
                 if (out->pts > last_pts)
                 {
-                    //usleep((out->pts - last_pts) / 90 * 1000);
+                    usleep((out->pts - last_pts) / 90 * 900);
                     //usleep((out->pts - last_pts) / 90 * 500);
                 }
                 last_pts = out->pts;
