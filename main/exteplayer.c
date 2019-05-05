@@ -144,7 +144,7 @@ static void TerminateWakeUp()
 
 static void *TermThreadFun(void *arg)
 {
-    const char *socket_path = "/tmp/iptvplayer_extplayer_term_fd";
+    const char *socket_path = "/tmp/.exteplayerterm.socket";
     struct sockaddr_un addr;
     int fd = -1;
     int cl = -1;
