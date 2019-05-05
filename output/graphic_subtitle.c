@@ -138,6 +138,7 @@ static int32_t Open(SubtitleCodecId_t codecId, uint8_t *extradata, int extradata
     case SUBTITLE_CODEC_ID_PGS:
         avCodecId = AV_CODEC_ID_HDMV_PGS_SUBTITLE;
         b_need_ephemer = true;
+        break;
     case SUBTITLE_CODEC_ID_DVB:
         avCodecId = AV_CODEC_ID_DVB_SUBTITLE;
         b_need_ephemer = true;
