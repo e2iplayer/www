@@ -65,6 +65,9 @@ typedef struct
     int64_t           dts;
     int64_t           durationMS; // duration in miliseconds
 
+    uint32_t         width;
+    uint32_t         height;
+
     char             *type;
 } SubtitleOut_t;
 

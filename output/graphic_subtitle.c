@@ -131,13 +131,19 @@ static int32_t Open(SubtitleCodecId_t codecId, uint8_t *extradata, int extradata
 {
     enum AVCodecID avCodecId = AV_CODEC_ID_NONE;
     const AVCodec *codec;
+    bool b_need_ephemer = false;
 
     /* */
     switch (codecId) {
     case SUBTITLE_CODEC_ID_PGS:
         avCodecId = AV_CODEC_ID_HDMV_PGS_SUBTITLE;
+        b_need_ephemer = true;
     case SUBTITLE_CODEC_ID_DVB:
         avCodecId = AV_CODEC_ID_DVB_SUBTITLE;
+        b_need_ephemer = true;
+        break;
+    case SUBTITLE_CODEC_ID_XSUB:
+        avCodecId = AV_CODEC_ID_XSUB;
         break;
     default:
         subtitle_err("unsupported subtitle codecId: %d\n", (int)codecId);
@@ -163,7 +169,7 @@ static int32_t Open(SubtitleCodecId_t codecId, uint8_t *extradata, int extradata
     g_sys->p_codec = codec;
 
     /* this mean that new subtitles atom overwrite the previous one */
-    g_sys->b_need_ephemer = codec->id == AV_CODEC_ID_HDMV_PGS_SUBTITLE;
+    g_sys->b_need_ephemer = b_need_ephemer;
 
     g_sys->p_swctx = NULL;
 
@@ -199,7 +205,14 @@ static int32_t Close()
     {
         AVCodecContext *ctx = g_sys->p_context;
 
-        avcodec_free_context(&ctx);
+        if (ctx)
+        {
+            /* extradata is not allocated by us */
+            ctx->extradata = NULL;
+            ctx->extradata_size = 0;
+
+            avcodec_free_context(&ctx);
+        }
         sws_freeContext(g_sys->p_swctx);
         free(g_sys);
         g_sys = NULL;
@@ -228,11 +241,15 @@ static int32_t Write(WriterSubCallData_t *subPacket)
 
     int has_subtitle = 0;
     int used = avcodec_decode_subtitle2(g_sys->p_context, &subtitle, &has_subtitle, &pkt);
-    if (has_subtitle)
+    uint32_t width = g_sys->p_context->width > 0 ? g_sys->p_context->width : subPacket->width;
+    uint32_t height = g_sys->p_context->height > 0 ? g_sys->p_context->height : subPacket->height;
+    if (has_subtitle && width > 0 && height > 0)
     {
         uint32_t i = 0;
         uint32_t j = 0;
-        uint64_t timestamp = subPacket->pts / 90  + subtitle.start_display_time;
+
+        uint64_t startTimestamp = subPacket->pts / 90  + subtitle.start_display_time;
+        uint64_t endTimestamp = subPacket->pts / 90  + subtitle.end_display_time;
         rec_desc_t desc_tab[MAX_RECT_DESC];
 
         for (; i < subtitle.num_rects && j < MAX_RECT_DESC; i++)
@@ -243,7 +260,7 @@ static int32_t Write(WriterSubCallData_t *subPacket)
             {
             case 0: /* 0 = graphics */
             {
-                snprintf(desc_tab[j].filename, sizeof(desc_tab[j].filename), "%u_%"PRId64"_%u.png", subPacket->trackId, timestamp, i);
+                snprintf(desc_tab[j].filename, sizeof(desc_tab[j].filename), "%u_%"PRId64"_%u.png", subPacket->trackId, startTimestamp, i);
 
                 ssize_t bufsz = snprintf(NULL, 0, "%s/%s", GetGraphicSubPath(), desc_tab[j].filename);
                 char *filepath = malloc(bufsz + 1);
@@ -254,10 +271,13 @@ static int32_t Write(WriterSubCallData_t *subPacket)
                 }
                 snprintf(filepath, bufsz + 1, "%s/%s", GetGraphicSubPath(), desc_tab[j].filename);
 
-                desc_tab[j].x = av_rescale(rec->x, GetGraphicWindowWidth(), g_sys->p_context->width);
-                desc_tab[j].y = av_rescale(rec->y, GetGraphicWindowHeight(), g_sys->p_context->height);
-                desc_tab[j].w = av_rescale(rec->w, GetGraphicWindowWidth(), g_sys->p_context->width);
-                desc_tab[j].h = av_rescale(rec->h, GetGraphicWindowHeight(), g_sys->p_context->height);
+                desc_tab[j].x = av_rescale(rec->x, GetGraphicWindowWidth(), width);
+                desc_tab[j].y = av_rescale(rec->y, GetGraphicWindowHeight(), height);
+                desc_tab[j].w = av_rescale(rec->w, GetGraphicWindowWidth(), width);
+                desc_tab[j].h = av_rescale(rec->h, GetGraphicWindowHeight(), height);
+
+                subtitle_printf(50, "SUB_REC: src  x[%d], y[%d], %dx%d\n", rec->x, rec->y, rec->w, rec->h);
+                subtitle_printf(50, "SUB_REC: dest x[%d], y[%d], %dx%d\n", desc_tab[j].x, desc_tab[j].y, desc_tab[j].w, desc_tab[j].h);
 
                 uint8_t *data[AV_NUM_DATA_POINTERS] = {NULL};
                 int linesize[AV_NUM_DATA_POINTERS] = {0};
@@ -293,7 +313,12 @@ static int32_t Write(WriterSubCallData_t *subPacket)
 
         char sep[2] = {'\0'};
         E2iStartMsg();
-        E2iSendMsg("{\"s_a\":{\"id\":%d,\"s\":%"PRId64",\"e\":null,\"r\":[", subPacket->trackId, timestamp);
+        E2iSendMsg("{\"s_a\":{\"id\":%d,\"s\":%"PRId64, subPacket->trackId, startTimestamp);
+        if (g_sys->b_need_ephemer)
+            E2iSendMsg(",\"e\":null,\"r\":[");
+        else
+            E2iSendMsg(",\"e\":%"PRId64",\"r\":[", endTimestamp);
+
         for (i = 0; i < j; i++)
         {
             E2iSendMsg("%s{\"x\":%d,\"y\":%d,\"w\":%d,\"h\":%d,\"f\":\"%s\"}", sep, desc_tab[i].x, desc_tab[i].y, desc_tab[i].w, desc_tab[i].h, desc_tab[i].filename);

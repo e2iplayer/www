@@ -478,7 +478,6 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
 #endif
         return "S_TEXT/ASS"; /* Hellmaster1024: seems to be ASS instead of SSA */
     case AV_CODEC_ID_DVD_SUBTITLE:
-    case AV_CODEC_ID_XSUB:
     case AV_CODEC_ID_MOV_TEXT:
     case AV_CODEC_ID_DVB_TELETEXT:
 //    case CODEC_ID_DVB_TELETEXT:
@@ -495,6 +494,8 @@ static char* Codec2Encoding(int32_t codec_id, int32_t media_type, uint8_t *extra
         return "S_GRAPHIC/PGS";
     case AV_CODEC_ID_DVB_SUBTITLE:
         return "S_GRAPHIC/DVB";
+    case AV_CODEC_ID_XSUB:
+        return "S_GRAPHIC/XSUB";
     default:
         ffmpeg_err("Codec ID %d (%.8x) not found\n", codec_id, codec_id);
         // Default to injected-pcm for unhandled audio types.
@@ -1290,6 +1291,10 @@ static void FFMPEGThread(Context_t *context)
                     subOut.len = packet.size;
                     subOut.pts = pts;
                     subOut.durationMS = duration;
+                    subOut.extradata = get_codecpar(stream)->extradata;
+                    subOut.extralen  = get_codecpar(stream)->extradata_size;
+                    subOut.width     = get_codecpar(stream)->width;;
+                    subOut.height    = get_codecpar(stream)->height;;
                     if (Write(context->output->subtitle->Write, context, &subOut, pts) < 0)
                     {
                         ffmpeg_err("writing data to teletext fifo failed\n");
@@ -2525,7 +2530,8 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                     get_codecpar(stream)->codec_id != AV_CODEC_ID_SRT &&
                     get_codecpar(stream)->codec_id != AV_CODEC_ID_WEBVTT &&
                     ((get_codecpar(stream)->codec_id != AV_CODEC_ID_HDMV_PGS_SUBTITLE &&
-                      get_codecpar(stream)->codec_id != AV_CODEC_ID_DVB_SUBTITLE) ||
+                      get_codecpar(stream)->codec_id != AV_CODEC_ID_DVB_SUBTITLE &&
+                      get_codecpar(stream)->codec_id != AV_CODEC_ID_XSUB) ||
                      !GetGraphicSubPath() || !GetGraphicSubPath()[0]))
                 {
                     ffmpeg_printf(10, "subtitle with not supported codec codec_id[%u]\n", (uint32_t)get_codecpar(stream)->codec_id);
@@ -2551,9 +2557,6 @@ int32_t container_ffmpeg_update_tracks(Context_t *context, char *filename, int32
                         ffmpeg_printf(10, "Stream has no duration so we take the duration from context\n");
                         track.duration = (int64_t) avContext->duration / 1000;
                     }
-
-                    track.extraData      = get_codecpar(stream)->extradata;
-                    track.extraSize      = get_codecpar(stream)->extradata_size;
 
                     ffmpeg_printf(1, "subtitle codec %d\n", get_codecpar(stream)->codec_id);
                     ffmpeg_printf(1, "subtitle width %d\n", get_codecpar(stream)->width);

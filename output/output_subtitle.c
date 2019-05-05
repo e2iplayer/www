@@ -225,6 +225,8 @@ static int Write(void *_context, void *data)
         subCodecId = SUBTITLE_CODEC_ID_PGS;
     else if (!strncmp("S_GRAPHIC/DVB", Encoding, 13))
         subCodecId = SUBTITLE_CODEC_ID_DVB;
+    else if (!strncmp("S_GRAPHIC/XSUB", Encoding, 14))
+        subCodecId = SUBTITLE_CODEC_ID_XSUB;
 
     switch (subCodecId)
     {
@@ -237,6 +239,7 @@ static int Write(void *_context, void *data)
         break;
         case SUBTITLE_CODEC_ID_PGS:
         case SUBTITLE_CODEC_ID_DVB:
+        case SUBTITLE_CODEC_ID_XSUB:
         {
             if (!g_subWriter)
             {
@@ -256,6 +259,8 @@ static int Write(void *_context, void *data)
             subPacket.private_size = out->extralen;
             subPacket.durationMS = out->durationMS;
 
+            subPacket.width = out->width;
+            subPacket.height = out->height;
             g_subWriter->write(&subPacket);
         }
         break;
