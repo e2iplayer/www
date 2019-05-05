@@ -168,6 +168,14 @@ static int32_t Open(uint8_t *extradata, int extradata_size)
         return -1;
     }
 
+    /* Lazy PNG plugin init */
+    ret = PNGPlugin_init();
+    if (0 != ret)
+    {
+        /* Report plugin error */
+        E2iSendMsg("{\"e_plugin\":[\"png\",\"init\",%d]}\n", ret);
+    }
+
     return 0;
 }
 

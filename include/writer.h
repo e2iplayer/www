@@ -98,15 +98,24 @@ void FlushPipe(int pipefd);
 ssize_t WriteExt(WriteV_t _call, int fd, void *data, size_t size);
 
 // Subtitles
+
+typedef enum {
+    SUBTITLE_CODEC_ID_SUBRIP,
+    SUBTITLE_CODEC_ID_ASS,
+    SUBTITLE_CODEC_ID_WEBVTT,
+    SUBTITLE_CODEC_ID_PGS
+} SubtitleCodecId_t;
+
 typedef struct {
-    uint32_t  trackId;
-    uint8_t   *data;
-    uint32_t  len;
-    int64_t   pts;
-    int64_t   dts;
-    uint8_t   *private_data;
-    uint32_t  private_size;
-    int64_t   durationMS; // duration in miliseconds
+    SubtitleCodecId_t codecId;
+    uint32_t          trackId;
+    uint8_t           *data;
+    uint32_t          len;
+    int64_t           pts;
+    int64_t           dts;
+    uint8_t           *private_data;
+    uint32_t          private_size;
+    int64_t           durationMS; // duration in miliseconds
 } WriterSubCallData_t;
 
 typedef struct SubWriter_s {

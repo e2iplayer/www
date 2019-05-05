@@ -39,7 +39,6 @@
 
 #include <pthread.h>
 
-#include "plugins/png.h"
 #include "common.h"
 #include "misc.h"
 
@@ -629,7 +628,7 @@ int main(int argc, char* argv[])
     int commandRetVal = -1;
 
     /* inform client that we can handle additional commands */
-    E2iSendMsg("{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 63);
+    E2iSendMsg("{\"EPLAYER3_EXTENDED\":{\"version\":%d}}\n", 64);
 
     PlayFiles_t playbackFiles;
     memset(&playbackFiles, 0x00, sizeof(playbackFiles));
@@ -721,10 +720,6 @@ int main(int argc, char* argv[])
     prctl(PR_SET_PDEATHSIG, SIGKILL);
 
     SetBuffering();
-
-    if (g_graphic_sub_path && g_graphic_sub_path[0] && g_windows_width > 0 && g_windows_height > 0)
-        if (PNGPlugin_init())
-            g_graphic_sub_path = NULL; // png plugin init failure
 
     //Registrating output devices
     g_player->output->Command(g_player, OUTPUT_ADD, "audio");

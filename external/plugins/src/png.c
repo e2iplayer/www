@@ -39,7 +39,9 @@ int PNGPlugin_saveRGBAImage(const char *filename, const unsigned char *data, int
 
 int PNGPlugin_init(void)
 {
-    if (NULL == handle)
+    if (NULL != handle)
+        return 0; /* Already initialized */
+    else
     {
         handle = dlopen("exteplayer3png.so", RTLD_LAZY);
         if (handle)
@@ -60,6 +62,7 @@ int PNGPlugin_init(void)
         }
         plugin_err( "%s\n", dlerror());
     }
+
     return -1;
 }
 
