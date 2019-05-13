@@ -23,6 +23,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "manager.h"
 #include "common.h"
@@ -31,7 +32,7 @@
 /* ***************************** */
 /* Makros/Constants              */
 /* ***************************** */
-#define TRACKWRAP 20
+#define TRACKWRAP 10
 
 /* Error Constants */
 #define cERR_SUBTITLE_MGR_NO_ERROR        0
@@ -48,6 +49,7 @@ static const char FILENAME[] = __FILE__;
 /* ***************************** */
 
 static Track_t * Tracks = NULL;
+static int TrackSlotCount = 0;
 static int TrackCount = 0;
 static int CurrentTrack = -1; //no as default.
 
@@ -64,12 +66,23 @@ static int ManagerAdd(Context_t *context, Track_t track)
     uint32_t i = 0;
     subtitle_mgr_printf(10, "%s::%s %s %s %d\n", FILENAME, __FUNCTION__, track.Name, track.Encoding, track.Id);
 
-    if (Tracks == NULL) 
+    if (TrackCount == TrackSlotCount)
     {
-        Tracks = malloc(sizeof(Track_t) * TRACKWRAP);
-        for (i = 0; i < TRACKWRAP; ++i)
+        static Track_t *t;
+        t = realloc(Tracks, (TrackSlotCount + TRACKWRAP) * sizeof(Track_t));
+        if (t)
         {
-            Tracks[i].Id = -1;
+            Tracks = t;
+            TrackSlotCount += TRACKWRAP;
+            for (i = TrackCount; i < TrackSlotCount; ++i)
+            {
+                Tracks[i].Id = -1;
+            }
+        }
+        else
+        {
+            subtitle_mgr_err("%s:%s realloc failed\n", FILENAME, __FUNCTION__);
+            return cERR_SUBTITLE_MGR_ERROR;
         }
     }
 
@@ -80,7 +93,7 @@ static int ManagerAdd(Context_t *context, Track_t track)
     }
 
     
-    for (i = 0; i < TRACKWRAP; ++i) 
+    for (i = 0; i < TrackSlotCount; ++i) 
     {
         if (Tracks[i].Id == track.Id)
         {
@@ -89,14 +102,14 @@ static int ManagerAdd(Context_t *context, Track_t track)
         }
     }
 
-    if (TrackCount < TRACKWRAP) 
+    if (TrackCount < TrackSlotCount) 
     {
         copyTrack(&Tracks[TrackCount], &track);
         TrackCount++;
     } 
     else
     {
-        subtitle_mgr_err("%s:%s TrackCount out if range %d - %d\n", FILENAME, __FUNCTION__, TrackCount, TRACKWRAP);
+        subtitle_mgr_err("%s:%s TrackCount out if range %d - %d\n", FILENAME, __FUNCTION__, TrackCount, TrackSlotCount);
         return cERR_SUBTITLE_MGR_ERROR;
     }
 
@@ -165,6 +178,7 @@ static int32_t ManagerDel(Context_t * context, int32_t onlycurrent)
             return cERR_SUBTITLE_MGR_ERROR;
         }
         TrackCount = 0;
+        TrackSlotCount = 0;
         context->playback->isSubtitle = 0;
     }
     
