@@ -975,6 +975,10 @@ while answer not in ['Y', 'N']:
 
 if answer == 'Y':
     copyDirContent(E2iPlayerDir, INSTALL_PATH_BASE)
+    with open('/tmp/e2isettings'):
+        f.write("config.plugins.iptvplayer.iptvplayer_login=%s\n" % LOGIN)
+        f.write("config.plugins.iptvplayer.iptvplayer_password=%s\n" % PASSWORD)
+
     with open(os.path.join(INSTALL_PATH_BASE, "update", ".settings.txt"), "w") as f:
         f.write("e2iplayer_login=%s\n" % LOGIN)
         f.write("e2iplayer_password=%s\n" % PASSWORD)
