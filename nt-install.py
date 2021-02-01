@@ -805,9 +805,7 @@ def downloadWithWget(url, output):
 
     for cmd in ['/iptvplayer_rootfs/usr/bin/wget --no-check-certificate', 'wget', 'wget --no-check-certificate', 'fullwget --no-check-certificate']:
         try:
-            file = os.popen(cmd + ' "%s" -O "%s" ' % (url, output))
-            data = file.read()
-            ret = file.close()
+            ret = os.system(cmd + ' "%s" -O "%s" ' % (url, output))
             if ret in [0, None]:
                 return
             else:
