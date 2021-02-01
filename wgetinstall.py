@@ -550,15 +550,15 @@ else:
     installSSLVer = '0.9.8'
 
 config = '%s/wget_%s%sopenssl%s' % (e2iPlatform, installOld, installFPU, installSSLVer)
-url = 'http://e2iplayer.github.io/www/wget/' + config
+url = 'http://e2iplayer.github.io/www/wget/' + config + '?_=' + str(time.time())
 
 installDir = INSTALL_BASE + 'usr/bin/'
 cmds = ['rm -rf /tmp/e2i_wget']
 cmds += ["wget '%s' -O /tmp/e2i_wget" % url]
-cmds += ["chmod 0755/tmp/e2i_wget"]
+cmds += ["chmod 0755 /tmp/e2i_wget"]
 cmds += ["/tmp/e2i_wget --version"]
 cmds += ["rm -rf %s" % (installDir + 'wget')]
-cmds += ["mkdir %s" % installDir]
+cmds += ["mkdir -p %s" % installDir]
 cmds += ["cp /tmp/e2i_wget %s" % (installDir + 'wget')]
 ret = os.system(' && '.join(cmds))
 os.system('rm -rf /tmp/e2i_wget')
