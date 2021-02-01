@@ -919,9 +919,9 @@ if availSpaceMB < requiredFreeSpaceMB:
 
 
 
-ret = os.system("mkdir -p %s" % INSTALL_BASE)
+ret = os.system("mkdir -p %s" % os.path.join(INSTALL_BASE, 'lib'))
 if ret not in [None, 0]:
-    raise Exception('Creating %s failed! Return code: %s' % (INSTALL_BASE, ret))
+    raise Exception('Creating %s failed! Return code: %s' % (os.path.join(INSTALL_BASE, 'lib'), ret))
 
 packageConfig = '%s_%s%s' % (e2iPlatform, installOld, installFPU)
 
