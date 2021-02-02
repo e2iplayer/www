@@ -506,11 +506,11 @@ printDBG("OpenSSL SONAME VERSION [%s]" % e2iOpenSSLVer)
 if e2iOpenSSLVer == '1.0.2':
     linksTab = []
     symlinksText = []
-    if not os.path.isfile(libsslPath + 'libssl.so.' + e2iOpenSSLVer):
+    if not os.path.isfile(libsslPath + 'libssl.so.1.0.0'):
         linksTab.append((libsslPath + 'libssl.so.' + e2iOpenSSLVer, libsslPath + 'libssl.so.1.0.0'))
         symlinksText.append('%s -> %s' % linksTab[-1])
     
-    if not os.path.isfile(libcryptoPath + 'libcrypto.so.' + e2iOpenSSLVer):
+    if not os.path.isfile(libcryptoPath + 'libcrypto.so.1.0.0'):
         linksTab.append((libcryptoPath + 'libcrypto.so.' + e2iOpenSSLVer, libcryptoPath + 'libcrypto.so.1.0.0'))
         symlinksText.append('%s -> %s' % linksTab[-1])
     
