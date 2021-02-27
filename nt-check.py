@@ -482,7 +482,7 @@ except Exception:
     pass
 
 
-packageConfig = '%s_fpu_%s' % (installOld, fpuType)
+packageConfig = '_%sfpu_%s' % (installOld, fpuType)
 url = 'https://www.e2iplayer.gitlab.io/resources/packages/bin/%s/e2isec%s' % (e2iPlatform, packageConfig)
 e2isec = os.path.join(TMP_DIR, 'getmac')
 downloadWithWget(url, e2isec)
