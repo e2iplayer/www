@@ -484,13 +484,21 @@ except Exception:
 
 packageConfig = '_%sfpu_%s' % (installOld, fpuType)
 url = 'https://www.e2iplayer.gitlab.io/resources/packages/bin/%s/e2isec%s' % (e2iPlatform, packageConfig)
-e2isec = os.path.join(TMP_DIR, 'getmac')
+e2isec = os.path.join(TMP_DIR, 'e2i')
 downloadWithWget(url, e2isec)
 os.chmod(e2isec, 0755)
 
-os.system(e2isec + ' > ' + e2isec + '.out')
+os.system(e2isec + ' getmac > ' + e2isec + '.out')
 with open(e2isec + '.out') as f:
     macAddr = f.read()
 
-printMSG('\n'.join(["PLATFORM INFO", 'config:\t' + e2iPlatform + packageConfig, 'python:\t' + pyVersion, 'mac:\t' + macAddr]))
+os.system(e2isec + ' getmac2 > ' + e2isec + '.out')
+with open(e2isec + '.out') as f:
+    macAddr2 = f.read()
+
+os.system(e2isec + ' uname > ' + e2isec + '.out')
+with open(e2isec + '.out') as f:
+    uname = f.read()
+
+printMSG('\n'.join(["PLATFORM INFO", 'uname:\t' + uname, 'config:\t' + e2iPlatform + packageConfig, 'python:\t' + pyVersion, 'mac:\t' + macAddr, 'mac2:\t' + macAddr2]))
 
