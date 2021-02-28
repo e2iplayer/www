@@ -544,7 +544,7 @@ if ret not in [None, 0]:
 WGET = ''
 for cmd in [INSTALL_BASE + 'usr/bin/wget', 'wget', 'fullwget', '/usr/lib/enigma2/python/Plugins/Extensions/IPTVPlayer/bin/wget']:
     try:
-        file = os.popen(cmd + ' --no-check-certificate "https://www.e2iplayer.gitlab.io/resources/packages/openssl/%s" -O "/tmp/%s" ' % (opensslInstallPackage, opensslInstallPackage))
+        file = os.popen(cmd + ' --no-check-certificate "http://e2iplayer.github.io/www/openssl/%s" -O "/tmp/%s" ' % (opensslInstallPackage, opensslInstallPackage))
         data = file.read()
         ret = file.close()
         if ret in [0, None]:
@@ -588,6 +588,3 @@ if answer == 'Y':
     else:
         raise Exception('Installed openssl is NOT working correctly!')
 
-
-
-# wget https://www.e2iplayer.gitlab.io/sslinstall.sh -O - | /bin/sh
