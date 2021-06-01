@@ -2,10 +2,52 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import os
+import re
+import traceback
+
+INSTALL_BASE = '/iptvplayer_rootfs/'
 
 IS_PY3 = sys.version_info[0] == 3
 if IS_PY3:
     ord=int
+    raw_input=input
+
+MSG_FORMAT = "\n\n=====================================================\n{0}\n=====================================================\n"
+
+try:
+    sys.stdin = open('/dev/tty')
+except Exception:
+    pass
+
+def ask(msg):
+    answer = ''
+    while answer not in ['Y', 'N']:
+        answer = raw_input(MSG_FORMAT.format(msg) + "\nY/N: ").strip().upper()
+        msg = ''
+    return answer == 'Y'
+
+def printWRN(txt):
+    print(MSG_FORMAT.format(txt))
+
+def printMSG(txt):
+    print(MSG_FORMAT.format(txt))
+
+def printDBG(txt):
+    print(str(txt))
+
+def printExc(msg=''):
+    print("===============================================")
+    print("                   EXCEPTION                   ")
+    print("===============================================")
+    msg = msg + ': \n%s' % traceback.format_exc()
+    print(msg)
+    print("===============================================")
+
+# check free size in the rootfs
+s = os.statvfs(INSTALL_BASE) if os.path.isdir(INSTALL_BASE) else os.statvfs("/")
+freeSpaceMB = s.f_bfree * s.f_frsize / (1024*1024) # in KB
+availSpaceMB = s.f_bavail * s.f_frsize / (1024*1024) # in KB
 
 ######################################################################################################################
 #                                                    ELF UTILITIES  BEGIN
@@ -415,3 +457,32 @@ def GetPlatformInfo():
 ######################################################################################################################
 #                                                    ELF UTILITIES  END
 ######################################################################################################################
+
+def getLibsPaths(installBase, platformInfo):
+    libsPaths = [installBase + 'usr/lib/', installBase + 'lib/']
+    if 64 == platformInfo['arch_bits']:
+        libsPaths.extend(['/lib64/', '/usr/lib64/'])
+    else:
+        libsPaths.extend(['/lib/', '/usr/lib/'])
+
+    for item in platformInfo.get('libs_paths', []):
+        if item not in libsPaths:
+            libsPaths.append(item + '/')
+    return libsPaths
+
+def getPackageConfig(platformInfo=None):
+    if platformInfo == None:
+        platformInfo = GetPlatformInfo()
+
+    e2iPlatform = platformInfo['platform']
+    glibcVer = platformInfo['libc_ver']
+    fpuType = platformInfo['fpu_type']
+
+    if e2iPlatform in ['sh4', 'mipsel'] and glibcVer < 220:
+        installOld = 'old_'
+    else:
+        installOld = ''
+
+    installFPU = 'fpu_%s' % fpuType
+
+    return '%s_%s%s' % (e2iPlatform, installOld, installFPU)
