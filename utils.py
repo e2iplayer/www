@@ -5,6 +5,7 @@ import sys
 import os
 import re
 import traceback
+import time
 
 INSTALL_BASE = '/iptvplayer_rootfs/'
 
@@ -15,6 +16,7 @@ if IS_PY3:
         if type(c) is int: return int(c)
         else: return int(_ord(c))
     raw_input=input
+    xrange=range
 
 MSG_FORMAT = "\n\n=====================================================\n{0}\n=====================================================\n"
 
@@ -71,7 +73,7 @@ EM_X86_64 = 62 # AMD x86-64 architecture
 EM_ARM = 40
 EM_AARCH64 = 183
 
-EM_MIPS = 8 
+EM_MIPS = 8
 EM_SH = 42
 
 ET_NONE = 0 # No file type
@@ -132,7 +134,7 @@ def ReadElfHeader(file):
     # e_ident
     tmp = file.read(11)
 
-    # e_type 
+    # e_type
     tmp = ReadUint16(file.read(2))
     if tmp not in (ET_EXEC, ET_DYN):
         raise Exception('Wrong type [%r]!' % tmp)
@@ -179,7 +181,7 @@ def ReadElfSectionHeader(file, ehdr):
         shdr['sh_offset'] = archRead(file.read(archSize)) # Section file offset
         shdr['sh_size']   = archRead(file.read(archSize)) # Size of section in bytes
         shdr['sh_link']   = ReadUint32(file.read(4)) # Index of another section
-        shdr['sh_info']   = ReadUint32(file.read(4)) # Additional section information 
+        shdr['sh_info']   = ReadUint32(file.read(4)) # Additional section information
         shdr['sh_addralign'] = archRead(file.read(archSize)) # Section alignment
         shdr['sh_entsize']   = archRead(file.read(archSize)) # Entry size if section holds table
         shdrTab.append(shdr)
@@ -304,7 +306,7 @@ def GetElfAttributes(file, shdrTab, attribsId):
                                 # display_gnu_attribute
                                   numRead, tag = _readLeb128(contents, p, end)
                                   p += numRead
-                                  if tag == Tag_GNU_MIPS_ABI_FP: 
+                                  if tag == Tag_GNU_MIPS_ABI_FP:
                                     numRead, val = _readLeb128(contents, p, end)
                                     p += numRead
                                     attribs['GNU_MIPS_ABI_FP'] = val # # Val_GNU_MIPS_ABI_FP_ANY=0, VFP_DOUBLE=1, VFP_SINGLE=2, VFP_SOFT=3, VFP_OLD_64=4, VFP_XX=5, VFP_64=6,VFP_64A=7, VFP_NAN2008=8
@@ -501,14 +503,17 @@ def checkPyVersion():
 
 def downloadUrl(url, out):
     wget = INSTALL_BASE + 'usr/bin/wget'
-    listToCheck = ['wget']
+    listToCheck = ['wget --no-check-certificate', 'wget']
     if os.path.isfile(wget):
-        listToCheck.insert(0, wget)
+        listToCheck.insert(0, '%s --no-check-certificate' % wget)
+
+    if '?' not in url:
+        url += '?_=' + str(time.time())
 
     wget = ''
     for cmd in listToCheck:
         try:
-            tmpCmd = cmd + ' --no-check-certificate "%s" -O "%s" ' % (url, out)
+            tmpCmd = cmd + ' "%s" -O "%s" ' % (url, out)
             printDBG('Try: ' + tmpCmd)
             file = os.popen(tmpCmd)
             data = file.read()
@@ -522,9 +527,13 @@ def downloadUrl(url, out):
             printDBG(e)
     return wget
 
-def checkFreeSpace(requiredFreeSpaceMB, packageName, allowForce=True):
+def checkFreeSpace(requiredFreeSpaceMB, packageName, allowForce=True, ):
     # check free size in the rootfs
-    s = os.statvfs(INSTALL_BASE) if os.path.isdir(INSTALL_BASE) else os.statvfs("/")
+    if packageName == 'E2iPlayer':
+        s = os.statvfs(INSTALL_PATH_BASE) if os.path.isdir(INSTALL_PATH_BASE) else os.statvfs(INSTALL_PATH_BASE.rsplit('/', 1)[0])
+    else:
+        s = os.statvfs(INSTALL_BASE) if os.path.isdir(INSTALL_BASE) else os.statvfs("/")
+
     freeSpaceMB = s.f_bfree * s.f_frsize // (1024*1024) # in KB
     availSpaceMB = s.f_bavail * s.f_frsize // (1024*1024) # in KB
 
@@ -534,4 +543,62 @@ def checkFreeSpace(requiredFreeSpaceMB, packageName, allowForce=True):
         if not allowForce or not ask(msg):
             printFatal("Not enough disk space for installing %s!\nAt least %s MB is required." % (packageName, requiredFreeSpaceMB))
 
+def GetOpenSSLVer(platformInfo):
+    libsPaths = getLibsPaths(INSTALL_BASE, platformInfo)
 
+    libsslPath = ''
+    libcryptoPath = ''
+    for ver in ['1.1', '1.0.2', '1.0.0', '0.9.8']:
+        libsslExist = False
+        libcryptoExist = False
+        libsslPath = ''
+        libcryptoPath = ''
+        for path in libsPaths:
+            filePath = path + 'libssl.so.' + ver
+            if os.path.isfile(filePath) and not os.path.islink(filePath):
+                libsslExist = True
+                libsslPath = path
+
+            filePath = path + 'libcrypto.so.' + ver
+            if os.path.isfile(filePath) and not os.path.islink(filePath):
+                libcryptoExist = True
+                libcryptoPath = path
+
+            if libsslExist and libcryptoExist:
+                e2iOpenSSLVer = ver
+                break
+
+        if e2iOpenSSLVer != '':
+            break
+
+    printDBG("OpenSSL SONAME VERSION [%s]" % e2iOpenSSLVer)
+    if e2iOpenSSLVer == '1.0.2':
+        linksTab = []
+        symlinksText = []
+        if not os.path.isfile(libsslPath + 'libssl.so.' + e2iOpenSSLVer):
+            linksTab.append((libsslPath + 'libssl.so.' + e2iOpenSSLVer, libsslPath + 'libssl.so.1.0.0'))
+            symlinksText.append('%s -> %s' % linksTab[-1])
+
+        if not os.path.isfile(libcryptoPath + 'libcrypto.so.' + e2iOpenSSLVer):
+            linksTab.append((libcryptoPath + 'libcrypto.so.' + e2iOpenSSLVer, libcryptoPath + 'libcrypto.so.1.0.0'))
+            symlinksText.append('%s -> %s' % linksTab[-1])
+
+        if len(linksTab):
+            msg = "OpenSSL in your image has different library names then these used by E2iPlayer.\nThere is need to create following symlinks:\n%s\nto be able to install binary components from E2iPlayer server.\nDo you want to proceed?" % ('\n'.join(symlinksText))
+            answer = ''
+            while answer not in ['Y', 'N']:
+                answer = raw_input(MSG_FORMAT.format(msg) + "\nY/N: ").strip().upper()
+                msg = ''
+
+            if answer == 'Y':
+                for item in linksTab:
+                    os.symlink(item[0], item[1])
+            else:
+                printFatal('Your OpenSSL version is not supported!')
+    elif e2iOpenSSLVer == '1.0.0':
+        with open(libsslPath + 'libssl.so.' + e2iOpenSSLVer, "rb") as file:
+            if b'OPENSSL_1.0.2' in file.read():
+                e2iOpenSSLVer = '1.0.2'
+
+    printDBG("OpenSSL VERSION [%s]" % e2iOpenSSLVer)
+    return e2iOpenSSLVer
