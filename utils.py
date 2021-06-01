@@ -10,7 +10,10 @@ INSTALL_BASE = '/iptvplayer_rootfs/'
 
 IS_PY3 = sys.version_info[0] == 3
 if IS_PY3:
-    ord=int
+    _ord=ord
+    def ord(c):
+        if type(c) is int: return c
+        else: return _ord(c)
     raw_input=input
 
 MSG_FORMAT = "\n\n=====================================================\n{0}\n=====================================================\n"
