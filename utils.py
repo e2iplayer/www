@@ -47,10 +47,13 @@ def printExc(msg=''):
     print(msg)
     print("===============================================")
 
-# check free size in the rootfs
-s = os.statvfs(INSTALL_BASE) if os.path.isdir(INSTALL_BASE) else os.statvfs("/")
-freeSpaceMB = s.f_bfree * s.f_frsize // (1024*1024) # in KB
-availSpaceMB = s.f_bavail * s.f_frsize // (1024*1024) # in KB
+def printFatal(msg='', errorCode=-1):
+    print("===============================================")
+    print("                     FATAL                     ")
+    print("===============================================")
+    print(msg)
+    print("===============================================")
+    sys.exit(errorCode)
 
 ######################################################################################################################
 #                                                    ELF UTILITIES  BEGIN
@@ -489,3 +492,46 @@ def getPackageConfig(platformInfo=None):
     installFPU = 'fpu_%s' % fpuType
 
     return '%s_%s%s' % (e2iPlatform, installOld, installFPU)
+
+def checkPyVersion():
+    pyVersion = 'python%s.%s' % (sys.version_info[0], sys.version_info[1])
+    if pyVersion not in ['python2.7', 'python2.6', 'python3.8']:
+        printFatal('Your python version "%s" is not supported!' % pyVersion)
+    return pyVersion
+
+def downloadUrl(url, out):
+    wget = INSTALL_BASE + 'usr/bin/wget'
+    listToCheck = ['wget']
+    if os.path.isfile(wget):
+        listToCheck.insert(0, wget)
+
+    wget = ''
+    for cmd in listToCheck:
+        try:
+            tmpCmd = cmd + ' --no-check-certificate "%s" -O "%s" ' % (url, out)
+            printDBG('Try: ' + tmpCmd)
+            file = os.popen(tmpCmd)
+            data = file.read()
+            ret = file.close()
+            if ret in [0, None]:
+                wget = cmd
+                break
+            else:
+                printDBG("Download using %s failed with return code: %s" % (cmd, ret))
+        except Exception as e:
+            printDBG(e)
+    return wget
+
+def checkFreeSpace(requiredFreeSpaceMB, packageName, allowForce=True):
+    # check free size in the rootfs
+    s = os.statvfs(INSTALL_BASE) if os.path.isdir(INSTALL_BASE) else os.statvfs("/")
+    freeSpaceMB = s.f_bfree * s.f_frsize // (1024*1024) # in KB
+    availSpaceMB = s.f_bavail * s.f_frsize // (1024*1024) # in KB
+
+    printDBG("Free space %s MB in rootfs" % (availSpaceMB))
+    if availSpaceMB < requiredFreeSpaceMB:
+        msg = "Not enough disk space for installing %s!\nAt least %s MB is required.\nYou have %s MB free space in the rootfs.\nDo you want to continue anyway?" % (packageName, requiredFreeSpaceMB, availSpaceMB)
+        if not allowForce or not ask(msg):
+            printFatal("Not enough disk space for installing %s!\nAt least %s MB is required." % (packageName, requiredFreeSpaceMB))
+
+
