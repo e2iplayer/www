@@ -12,8 +12,8 @@ IS_PY3 = sys.version_info[0] == 3
 if IS_PY3:
     _ord=ord
     def ord(c):
-        if type(c) is int: return c
-        else: return _ord(c)
+        if type(c) is int: return int(c)
+        else: return int(_ord(c))
     raw_input=input
 
 MSG_FORMAT = "\n\n=====================================================\n{0}\n=====================================================\n"
@@ -49,8 +49,8 @@ def printExc(msg=''):
 
 # check free size in the rootfs
 s = os.statvfs(INSTALL_BASE) if os.path.isdir(INSTALL_BASE) else os.statvfs("/")
-freeSpaceMB = s.f_bfree * s.f_frsize / (1024*1024) # in KB
-availSpaceMB = s.f_bavail * s.f_frsize / (1024*1024) # in KB
+freeSpaceMB = s.f_bfree * s.f_frsize // (1024*1024) # in KB
+availSpaceMB = s.f_bavail * s.f_frsize // (1024*1024) # in KB
 
 ######################################################################################################################
 #                                                    ELF UTILITIES  BEGIN
@@ -142,7 +142,7 @@ def ReadElfHeader(file):
     # e_version
     ehdr['e_version'] = ReadUint32(file.read(4))
 
-    archSize = ehdr['class_bits'] / 8
+    archSize = ehdr['class_bits'] // 8
     archRead = ReadUint32 if archSize == 4 else ReadUint64
 
     ehdr['e_entry'] = archRead(file.read(archSize))
@@ -161,7 +161,7 @@ def ReadElfHeader(file):
 
 def ReadElfSectionHeader(file, ehdr):
     shdrTab = []
-    archSize = ehdr['class_bits'] / 8
+    archSize = ehdr['class_bits'] // 8
     archRead = ReadUint32 if archSize == 4 else ReadUint64
 
     for idx in range(ehdr['e_shnum']):
@@ -454,8 +454,8 @@ def GetPlatformInfo():
                 info['fpu_type'] = 'hard'
             else:
                 raise Exception("Not supported architecture: %r" % ehdr['e_machine'])
-    except Exception:
-        printExc()
+    except Exception as e:
+        printExc(str(e))
     return info
 ######################################################################################################################
 #                                                    ELF UTILITIES  END
