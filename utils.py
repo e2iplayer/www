@@ -266,7 +266,7 @@ def GetElfAttributes(file, shdrTab, attribsId):
             file.seek(shrd['sh_offset'])
             contents = file.read(shrd['sh_size'])
             p = 0
-            if contents.startswith('A'):
+            if contents.startswith(b'A'):
                 p += 1
                 sectionLen = shrd['sh_size'] -1
                 while sectionLen > 0:
