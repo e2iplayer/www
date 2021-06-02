@@ -517,7 +517,7 @@ def downloadUrl(url, out):
         try:
             tmpCmd = cmd + ' "%s" -O "%s" ' % (url, out)
             if not DEBUG:
-                tmpCmd + " 2>&1"
+                tmpCmd += " 2>&1"
             printDBG('Try: ' + tmpCmd)
             file = os.popen(tmpCmd)
             data = file.read()
