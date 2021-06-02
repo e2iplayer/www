@@ -552,6 +552,7 @@ def GetOpenSSLVer(platformInfo):
 
     libsslPath = ''
     libcryptoPath = ''
+    e2iOpenSSLVer = ''
     for ver in ['1.1', '1.0.2', '1.0.0', '0.9.8']:
         libsslExist = False
         libcryptoExist = False
@@ -572,7 +573,7 @@ def GetOpenSSLVer(platformInfo):
                 e2iOpenSSLVer = ver
                 break
 
-        if e2iOpenSSLVer != '':
+        if e2iOpenSSLVer:
             break
 
     printDBG("OpenSSL SONAME VERSION [%s]" % e2iOpenSSLVer)
