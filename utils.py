@@ -8,6 +8,7 @@ import traceback
 import time
 
 INSTALL_BASE = '/iptvplayer_rootfs/'
+DEBUG=False
 
 IS_PY3 = sys.version_info[0] == 3
 if IS_PY3:
@@ -39,7 +40,8 @@ def printMSG(txt):
     print(MSG_FORMAT.format(txt))
 
 def printDBG(txt):
-    print(str(txt))
+    if DEBUG:
+        print(str(txt))
 
 def printExc(msg=''):
     print("===============================================")
@@ -514,6 +516,8 @@ def downloadUrl(url, out):
     for cmd in listToCheck:
         try:
             tmpCmd = cmd + ' "%s" -O "%s" ' % (url, out)
+            if not DEBUG:
+                tmpCmd + " 2>&1"
             printDBG('Try: ' + tmpCmd)
             file = os.popen(tmpCmd)
             data = file.read()
