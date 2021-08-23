@@ -390,25 +390,34 @@ def GetPlatformInfo():
     try:
         libsPaths = []
         libcPath = ''
+        libcPathAlt = ''
         ldPath = ''
         tmp = GetMappedFiles()
         for it in tmp:
             p, t = it.rsplit('/', 1)
             if t.startswith('libc-'):
                 libcPath = it
+            if t.startswith('libc.'):
+                libcPathAlt = it
             if t.startswith('ld-'):
                 ldPath = it
             if '/lib' in p and t.startswith('lib') and p not in libsPaths:
                 libsPaths.append(p)
-        info['libc_path'] = libcPath
+        info['libc_path'] = libcPath if libcPath else libcPathAlt
         info['ld_path'] = ldPath
         info['libs_paths'] = libsPaths
 
         glibcVersion = re.search("libc\-([0-9]+)\.([0-9]+)\.", info['libc_path'])
+        if not glibcVersion:
+            file = os.popen('%s --version 2>&1' % info['libc_path'])
+            glibcVersion = file.read()
+            file.close()
+            glibcVersion = re.search("stable release version ([0-9]+)\.([0-9]+)", glibcVersion)
+
         glibcVersion = int(glibcVersion.group(1)) * 100 + int(glibcVersion.group(2))
         info['libc_ver'] = glibcVersion
 
-        with open(libcPath, "rb") as file:
+        with open(info['libc_path'], "rb") as file:
             ehdr = ReadElfHeader(file)
             info['arch_bits'] =  ehdr['class_bits']
             shdrTab = ReadElfSectionHeader(file, ehdr)
