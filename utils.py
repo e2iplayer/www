@@ -508,7 +508,7 @@ def getPackageConfig(platformInfo=None):
 
 def checkPyVersion():
     pyVersion = 'python%s.%s' % (sys.version_info[0], sys.version_info[1])
-    if pyVersion not in ['python2.7', 'python2.6', 'python3.8']:
+    if pyVersion not in ['python2.7', 'python2.6', 'python3.8', 'python3.9']:
         printFatal('Your python version "%s" is not supported!' % pyVersion)
     return pyVersion
 

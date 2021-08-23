@@ -37,7 +37,7 @@ if not os.path.isdir(sitePackagesPath):
     raise Exception('Python site-packages directory "%s" does not exists!\nPlease report this via e-mail: e2iplayer@yahoo.com' % sitePackagesPath)
 
 printDBG("sitePackagesPath %s" % sitePackagesPath)
-expectedPyCurlVersion = 20200930
+expectedPyCurlVersion = 20210823
 acctionNeededBeforeInstall = 'NONE'
 systemPyCurlPath = sitePackagesPath + '/pycurl.so'
 localPyCurlPath = os.path.join(INSTALL_BASE, 'usr/lib/%s/site-packages/pycurl.so' % (pyVersion))
