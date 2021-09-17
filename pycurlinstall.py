@@ -37,7 +37,7 @@ if not os.path.isdir(sitePackagesPath):
     raise Exception('Python site-packages directory "%s" does not exists!\nPlease report this via e-mail: e2iplayer@yahoo.com' % sitePackagesPath)
 
 printDBG("sitePackagesPath %s" % sitePackagesPath)
-expectedPyCurlVersion = 20210823
+expectedPyCurlVersion = 20200930 #20210823
 acctionNeededBeforeInstall = 'NONE'
 systemPyCurlPath = sitePackagesPath + '/pycurl.so'
 localPyCurlPath = os.path.join(INSTALL_BASE, 'usr/lib/%s/site-packages/pycurl.so' % (pyVersion))
@@ -95,7 +95,7 @@ if ask(msg):
 
     # check if pycurl is working
     import pycurl
-    if pycurl.E2IPLAYER_VERSION_NUM == expectedPyCurlVersion:
+    if pycurl.E2IPLAYER_VERSION_NUM >= expectedPyCurlVersion:
         printMSG('Done. PyCurl version "%s" installed correctly.\nPlease remember to restart your Enigma2.' % (pycurl.E2IPLAYER_VERSION_NUM))
     else:
         printFatal('Installed PyCurl is NOT working correctly! It report diffrent version "%s" then expected "%s"' % (pycurl.E2IPLAYER_VERSION_NUM, expectedPyCurlVersion))
