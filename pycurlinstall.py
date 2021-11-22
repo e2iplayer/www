@@ -37,7 +37,7 @@ if not os.path.isdir(sitePackagesPath):
     raise Exception('Python site-packages directory "%s" does not exists!\nPlease report this via e-mail: e2iplayer@yahoo.com' % sitePackagesPath)
 
 printDBG("sitePackagesPath %s" % sitePackagesPath)
-expectedPyCurlVersion = 20200930 #20210823
+expectedPyCurlVersion = 20211122
 acctionNeededBeforeInstall = 'NONE'
 systemPyCurlPath = sitePackagesPath + '/pycurl.so'
 localPyCurlPath = os.path.join(INSTALL_BASE, 'usr/lib/%s/site-packages/pycurl.so' % (pyVersion))
@@ -75,8 +75,7 @@ if not downloadUrl(url, out):
 msg = 'Package %s ready to install.\nDo you want to proceed?' % installPackage
 if ask(msg):
     # remove old version
-    os.system('rm -rf %s/lib/libcurl.so*' % INSTALL_BASE)
-    os.system('rm -rf %s/lib/libwolfssl.so*' % INSTALL_BASE)
+    os.system('(cd %s/lib/; rm -f libcurl.so* libwolfssl.so* libnghttp2.so* libbrotlidec.so* libbrotlicommon.so*)' % INSTALL_BASE)
 
     ret = os.system("mkdir -p %s && tar -xvf /tmp/%s -C %s " % (INSTALL_BASE, installPackage, INSTALL_BASE))
     if ret not in [None, 0]:
