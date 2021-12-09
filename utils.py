@@ -543,6 +543,8 @@ def downloadUrl(url, out):
                 ret = str(ret)
                 if ret not in errorCodes:
                     errorCodes.append(ret)
+                else:
+                    continue
 
                 data = data.split('\n')
                 for it in reversed(data):
@@ -637,4 +639,5 @@ def GetOpenSSLVer(platformInfo):
     printDBG("OpenSSL VERSION [%s]" % e2iOpenSSLVer)
     return e2iOpenSSLVer
 
-os.system('clear')
+if not DEBUG:
+    os.system('clear')
