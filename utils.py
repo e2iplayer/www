@@ -8,7 +8,7 @@ import traceback
 import time
 
 INSTALL_BASE = '/iptvplayer_rootfs/'
-DEBUG=False
+DEBUG = os.environ.get('E2I_DEBUG')
 
 IS_PY3 = sys.version_info[0] == 3
 if IS_PY3:
