@@ -521,6 +521,8 @@ def downloadUrl(url, out):
     if '?' not in url:
         url += '?_=' + str(time.time())
 
+    errorMsg = []
+    errorCodes = []
     wget = ''
     for cmd in listToCheck:
         try:
@@ -536,8 +538,20 @@ def downloadUrl(url, out):
                 break
             else:
                 printDBG("Download using %s failed with return code: %s" % (cmd, ret))
+                if ret not in errorCodes:
+                    errorCodes.append(ret)
+
+                data = data.split('\n')
+                for it in reversed(data):
+                    if not it.strip():
+                        continue
+                    if it not in errorMsg:
+                        errorMsg.append(it)
+                    break
+                
         except Exception as e:
             printDBG(e)
+    printWRN("Download using failed %s, %s" % (errorCodes, errorMsg))
     return wget
 
 def checkFreeSpace(requiredFreeSpaceMB, packageName, allowForce=True, ):
