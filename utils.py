@@ -541,8 +541,8 @@ def downloadUrl(url, out):
                 if ret not in errorCodes:
                     errorCodes.append(ret)
 
-                data = data.split('\n')
                 printDBG('DATA: ' + data)
+                data = data.split('\n')
                 for it in reversed(data):
                     if not it.strip():
                         continue
