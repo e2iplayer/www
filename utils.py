@@ -538,6 +538,7 @@ def downloadUrl(url, out):
                 wget = cmd
                 break
             elif not DEBUG:
+                ret = str(ret)
                 if ret not in errorCodes:
                     errorCodes.append(ret)
 
