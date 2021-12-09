@@ -39,9 +39,10 @@ class bcolors:
 
 def ask(msg):
     answer = ''
+    msg = MSG_FORMAT.format(msg) + '\n'
     while answer not in ['Y', 'N']:
-        answer = raw_input(MSG_FORMAT.format(msg) + ("\n%sY%s/%sN%s: " % (bcolors.OKGREEN, bcolors.ENDC, bcolors.FAIL, bcolors.ENDC))).strip().upper()
-        msg = ''
+        answer = raw_input(msg + ("%sY%s/%sN%s: " % (bcolors.OKGREEN, bcolors.ENDC, bcolors.FAIL, bcolors.ENDC))).strip().upper()
+        msg = '\033[1K'
     return answer == 'Y'
 
 def printColor(txt, color=None):
