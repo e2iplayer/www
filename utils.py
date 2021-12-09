@@ -538,6 +538,8 @@ def downloadUrl(url, out):
                 wget = cmd
                 break
             elif not DEBUG:
+                if '--no-check-certificate' in data:
+                    continue
                 ret = str(ret)
                 if ret not in errorCodes:
                     errorCodes.append(ret)
