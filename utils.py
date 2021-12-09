@@ -40,7 +40,7 @@ class bcolors:
 def ask(msg):
     answer = ''
     while answer not in ['Y', 'N']:
-        answer = raw_input(MSG_FORMAT.format(msg) + "\nY/N: ").strip().upper()
+        answer = raw_input(MSG_FORMAT.format(msg) + ("\n%sY%s/%sN%s: " % (bcolors.OKGREEN, bcolors.ENDC, bcolors.FAIL, bcolors.ENDC))).strip().upper()
         msg = ''
     return answer == 'Y'
 
@@ -59,19 +59,19 @@ def printDBG(txt):
         print(str(txt))
 
 def printExc(msg=''):
-    print("===============================================")
-    print("                   EXCEPTION                   ")
-    print("===============================================")
+    printColor("===============================================")
+    printColor("                   EXCEPTION                   ")
+    printColor("===============================================")
     msg = msg + ': \n%s' % traceback.format_exc()
-    printColor(msg, bcolors.FAIL)
-    print("===============================================")
+    print(msg, bcolors.FAIL)
+    printColor("===============================================")
 
 def printFatal(msg='', errorCode=-1):
-    print("===============================================")
-    print("                     FATAL                     ")
-    print("===============================================")
-    printColor(msg, bcolors.FAIL)
-    print("===============================================")
+    printColor("===============================================")
+    printColor("                     FATAL                     ")
+    printColor("===============================================")
+    print(msg, bcolors.FAIL)
+    printColor("===============================================")
     sys.exit(errorCode)
 
 ######################################################################################################################
