@@ -634,3 +634,5 @@ def GetOpenSSLVer(platformInfo):
 
     printDBG("OpenSSL VERSION [%s]" % e2iOpenSSLVer)
     return e2iOpenSSLVer
+
+os.system('clear')
