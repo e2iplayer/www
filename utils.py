@@ -542,6 +542,7 @@ def downloadUrl(url, out):
                     errorCodes.append(ret)
 
                 data = data.split('\n')
+                printDBG('DATA: ' + data)
                 for it in reversed(data):
                     if not it.strip():
                         continue
@@ -551,7 +552,8 @@ def downloadUrl(url, out):
                 
         except Exception as e:
             printDBG(e)
-    printWRN("Download using failed %s, %s" % (errorCodes, errorMsg))
+    if errorCodes:
+        printWRN("Download failed %s, %s" % (errorCodes, errorMsg))
     return wget
 
 def checkFreeSpace(requiredFreeSpaceMB, packageName, allowForce=True, ):
