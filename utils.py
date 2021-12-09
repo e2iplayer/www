@@ -33,8 +33,9 @@ def ask(msg):
         msg = ''
     return answer == 'Y'
 
-def printWRN(txt):
-    print(MSG_FORMAT.format(txt))
+def printWRN(txt, format=None):
+    if None == format: format = MSG_FORMAT
+    print(format.format(txt))
 
 def printMSG(txt):
     print(MSG_FORMAT.format(txt))
@@ -536,12 +537,10 @@ def downloadUrl(url, out):
             if ret in [0, None]:
                 wget = cmd
                 break
-            else:
-                printDBG("Download using %s failed with return code: %s" % (cmd, ret))
+            elif not DEBUG:
                 if ret not in errorCodes:
                     errorCodes.append(ret)
 
-                printDBG('DATA: ' + data)
                 data = data.split('\n')
                 for it in reversed(data):
                     if not it.strip():
@@ -549,11 +548,13 @@ def downloadUrl(url, out):
                     if it not in errorMsg:
                         errorMsg.append(it)
                     break
-                
+            else:
+                printDBG("Download using %s failed with return code: %s" % (cmd, ret))
+
         except Exception as e:
             printDBG(e)
     if errorCodes:
-        printWRN("Download failed %s, %s" % (errorCodes, errorMsg))
+        printWRN("Download failed %s: %s" % (', '.join(errorCodes), ', '.join(errorMsg)), '{}')
     return wget
 
 def checkFreeSpace(requiredFreeSpaceMB, packageName, allowForce=True, ):
