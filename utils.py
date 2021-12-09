@@ -59,19 +59,19 @@ def printDBG(txt):
         print(str(txt))
 
 def printExc(msg=''):
-    printColor("===============================================")
-    printColor("                   EXCEPTION                   ")
-    printColor("===============================================")
+    printColor("===============================================", bcolors.FAIL)
+    printColor("                   EXCEPTION                   ", bcolors.FAIL)
+    printColor("===============================================", bcolors.FAIL)
     msg = msg + ': \n%s' % traceback.format_exc()
-    print(msg, bcolors.FAIL)
-    printColor("===============================================")
+    print(msg)
+    printColor("===============================================", bcolors.FAIL)
 
 def printFatal(msg='', errorCode=-1):
-    printColor("===============================================")
-    printColor("                     FATAL                     ")
-    printColor("===============================================")
-    print(msg, bcolors.FAIL)
-    printColor("===============================================")
+    printColor("===============================================", bcolors.FAIL)
+    printColor("                     FATAL                     ", bcolors.FAIL)
+    printColor("===============================================", bcolors.FAIL)
+    print(msg)
+    printColor("===============================================", bcolors.FAIL)
     sys.exit(errorCode)
 
 ######################################################################################################################
