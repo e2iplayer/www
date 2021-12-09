@@ -26,6 +26,17 @@ try:
 except Exception:
     pass
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
 def ask(msg):
     answer = ''
     while answer not in ['Y', 'N']:
@@ -33,12 +44,15 @@ def ask(msg):
         msg = ''
     return answer == 'Y'
 
+def printColor(txt, color=None):
+    print(color + txt + bcolors.ENDC)
+
 def printWRN(txt, format=None):
     if None == format: format = MSG_FORMAT
-    print(format.format(txt))
+    print(format.format(bcolors.WARNING + txt + bcolors.ENDC))
 
 def printMSG(txt):
-    print(MSG_FORMAT.format(txt))
+    print(MSG_FORMAT.format(bcolors.OKGREEN + txt + bcolors.ENDC))
 
 def printDBG(txt):
     if DEBUG:
@@ -49,14 +63,14 @@ def printExc(msg=''):
     print("                   EXCEPTION                   ")
     print("===============================================")
     msg = msg + ': \n%s' % traceback.format_exc()
-    print(msg)
+    printColor(msg, bcolors.FAIL)
     print("===============================================")
 
 def printFatal(msg='', errorCode=-1):
     print("===============================================")
     print("                     FATAL                     ")
     print("===============================================")
-    print(msg)
+    printColor(msg, bcolors.FAIL)
     print("===============================================")
     sys.exit(errorCode)
 
