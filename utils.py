@@ -54,10 +54,11 @@ def printWRN(txt, format=None):
     if None == format: format = MSG_FORMAT
     print(format.format(bcolors.WARNING + txt + bcolors.ENDC))
 
-def printMSG(txt):
-    color = bcolors.OKGREEN
-    if ' cancel' in txt or ' skip' in txt:
-        color = bcolors.WARNING
+def printMSG(txt, color=None):
+    if color == None:
+        color = bcolors.OKGREEN
+        if ' cancel' in txt or ' skip' in txt:
+            color = bcolors.WARNING
     print(MSG_FORMAT.format(color + txt + bcolors.ENDC))
 
 def printDBG(txt):
@@ -534,7 +535,7 @@ def checkPyVersion():
     return pyVersion
 
 def downloadUrl(url, out):
-    printMSG('Downloading "%s" please wait.' % url.split('?', 1)[0], '{}')
+    printMSG('Downloading "%s" please wait.' % url.split('?', 1)[0], '{}', bcolors.UNDERLINE)
 
     wget = INSTALL_BASE + 'usr/bin/wget'
     listToCheck = ['wget --no-check-certificate', 'wget']
