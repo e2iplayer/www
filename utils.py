@@ -54,12 +54,14 @@ def printWRN(txt, format=None):
     if None == format: format = MSG_FORMAT
     print(format.format(bcolors.WARNING + txt + bcolors.ENDC))
 
-def printMSG(txt, color=None):
+def printMSG(txt, format=None, color=None):
     if color == None:
         color = bcolors.OKGREEN
         if ' cancel' in txt or ' skip' in txt:
             color = bcolors.WARNING
-    print(MSG_FORMAT.format(color + txt + bcolors.ENDC))
+    if format == None:
+        format = MSG_FORMAT
+    print(format.format(color + txt + bcolors.ENDC))
 
 def printDBG(txt):
     if DEBUG:
