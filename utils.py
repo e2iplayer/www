@@ -39,7 +39,7 @@ class bcolors:
 
 def ask(msg):
     answer = ''
-    msg = MSG_FORMAT.format(msg) + '\n'
+    msg = MSG_FORMAT.format(bcolors.BOLD + msg + bcolors.ENDC) + '\n'
     while answer not in ['Y', 'N']:
         if not msg:
             print('\033[1K')
@@ -537,7 +537,7 @@ def checkPyVersion():
     return pyVersion
 
 def downloadUrl(url, out):
-    printMSG('Downloading "%s" please wait.' % url.split('?', 1)[0], '{}', bcolors.UNDERLINE)
+    printMSG('Downloading "%s"' % url.split('?', 1)[0], '{}', bcolors.ENDC)
 
     wget = INSTALL_BASE + 'usr/bin/wget'
     listToCheck = ['wget --no-check-certificate', 'wget']
