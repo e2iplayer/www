@@ -41,8 +41,10 @@ def ask(msg):
     answer = ''
     msg = MSG_FORMAT.format(msg) + '\n'
     while answer not in ['Y', 'N']:
-        answer = raw_input(msg + ("%sY%s/%sN%s: " % (bcolors.OKGREEN, bcolors.ENDC, bcolors.FAIL, bcolors.ENDC))).strip().upper()
-        msg = '\033[1K'
+        if not msg:
+            print('\033[1K')
+        answer = raw_input(msg + ("%sY%s/%sN%s: " % (bcolors.OKGREEN, bcolors.ENDC, bcolors.WARNING, bcolors.ENDC))).strip().upper()
+        msg = ''
     return answer == 'Y'
 
 def printColor(txt, color=None):
@@ -53,7 +55,10 @@ def printWRN(txt, format=None):
     print(format.format(bcolors.WARNING + txt + bcolors.ENDC))
 
 def printMSG(txt):
-    print(MSG_FORMAT.format(bcolors.OKGREEN + txt + bcolors.ENDC))
+    color = bcolors.OKGREEN
+    if ' cancel' in txt or ' skip' in txt:
+        color = bcolors.WARNING
+    print(MSG_FORMAT.format(color + txt + bcolors.ENDC))
 
 def printDBG(txt):
     if DEBUG:
@@ -529,6 +534,8 @@ def checkPyVersion():
     return pyVersion
 
 def downloadUrl(url, out):
+    printMSG('Downloading "%s" please wait.' % url.split('?', 1)[0], '{}')
+
     wget = INSTALL_BASE + 'usr/bin/wget'
     listToCheck = ['wget --no-check-certificate', 'wget']
     if os.path.isfile(wget):
