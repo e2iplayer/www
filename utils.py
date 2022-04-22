@@ -537,7 +537,7 @@ def checkPyVersion():
     return pyVersion
 
 def downloadUrl(url, out):
-    printMSG('Downloading "%s"' % url.split('?', 1)[0], '{}', bcolors.ENDC)
+    printMSG('Downloading "%s"' % url.split('?', 1)[0], '{0}', bcolors.ENDC)
 
     wget = INSTALL_BASE + 'usr/bin/wget'
     listToCheck = ['wget --no-check-certificate', 'wget']
@@ -584,7 +584,7 @@ def downloadUrl(url, out):
         except Exception as e:
             printDBG(e)
     if errorCodes:
-        printWRN("Download failed %s: %s" % (', '.join(errorCodes), ', '.join(errorMsg)), '{}')
+        printWRN("Download failed %s: %s" % (', '.join(errorCodes), ', '.join(errorMsg)), '{0}')
     return wget
 
 def checkFreeSpace(requiredFreeSpaceMB, packageName, allowForce=True, ):
