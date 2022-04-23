@@ -521,6 +521,7 @@ if ask(msg):
         f.write("e2iplayer_login=%s\n" % LOGIN)
         f.write("e2iplayer_password=%s\n" % PASSWORD)
         f.write("preferredupdateserver=%s\n" % '3') # '3' - private server
+        f.write("possibleupdatetype=%s\n" % 'all') # '3' - private server
         e2irootfs = ''
         for it in ('/hdd', '/media/hdd', '/media/usb', '/media/mmc'):
             if os.path.isdir(it + '/e2irootfs'):
@@ -537,8 +538,13 @@ if ask(msg):
             f.write("recording_path=%s/e2i_recording\n" % e2irootfs)
             f.write("temp_path=%s/e2i_temp\n" % e2irootfs)
             f.write("cache_path=%s/e2i_cache\n" % e2irootfs)
-        f.write("rambuffer_files=10\n")
-        f.write("rambuffer_network=20\n")
+
+        if GetTotalMem() / 1024 >= 400:
+            f.write("rambuffer_files=10\n")
+            f.write("rambuffer_network=20\n")
+        else:
+            f.write("rambuffer_files=2\n")
+            f.write("rambuffer_network=5\n")
 
     os.system("sync")
     printMSG('Done. E2iPlayer version "%s" installed correctly.\nPlease remember to restart your Enigma2.' % (E2iPlayerVer))

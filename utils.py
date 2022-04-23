@@ -664,5 +664,13 @@ def GetOpenSSLVer(platformInfo):
     printDBG("OpenSSL VERSION [%s]" % e2iOpenSSLVer)
     return e2iOpenSSLVer
 
+def GetTotalMem():
+    try:
+        with open('/proc/meminfo') as f:
+            data = f.readline()
+        return int(re.search('([0-9]+)', data).group(1))
+    except Exception as e:
+        return -1
+
 if not DEBUG:
     os.system('clear')
