@@ -56,11 +56,11 @@ if ret not in [None, 0]:
 def HasPackage():
     hasPackage = False
     try:
-        file = os.popen(installPath)
+        file = os.popen(installPath + ' 2>1 ')
         data = file.read()
         printDBG('Test output data: %s' % data)
         ret = file.close()
-        printDBG('Test return code: %d' % ret)
+        printDBG('Test return code: %r' % ret)
         if ret in [0, None]:
             hasPackage = True
     except Exception as e:
