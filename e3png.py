@@ -29,7 +29,8 @@ if ret not in [None, 0]:
 packageConfig = getPackageConfig(platformInfo)
 installFile = "exteplayer3png.so"
 
-url = 'https://www.e2iplayer.gitlab.io/resources/packages/bin/%s/exteplayer3png_%s.so' % (tuple(packageConfig.split('_', 1)))
+installPackage = '%s/exteplayer3png_%s.so' % (tuple(packageConfig.split('_', 1)))
+url = 'https://www.e2iplayer.gitlab.io/resources/packages/bin/' + installPackage
 out = os.path.join('/tmp', installFile)
 
 printDBG("Slected exteplayer3png package: %s" % url)
@@ -59,6 +60,7 @@ def HasPackage():
         data = file.read()
         printDBG('Test output data: %s' % data)
         ret = file.close()
+        printDBG('Test return code: %d' % ret)
         if ret in [0, None]:
             hasPackage = True
     except Exception as e:
