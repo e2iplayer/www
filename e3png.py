@@ -60,7 +60,10 @@ def HasPackage():
         data = file.read()
         printDBG('Test output data: %s' % data)
         ret = file.close()
-        printDBG('Test return code: %r' % ret)
+        ecode = None
+        try: ecode = os.waitstatus_to_exitcode(ret)
+        except Exception as e: printDBG('%s' % e)
+        printDBG('Test return code: %r -> %r' % (ret, ecode))
         if ret in [0, None]:
             hasPackage = True
     except Exception as e:
