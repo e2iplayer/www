@@ -45,7 +45,9 @@ acctionNeededBeforeInstall = 'NONE'
 localPyCurlPath = os.path.join(INSTALL_BASE, 'usr/lib/%s/site-packages/pycurl.so' % (pyVersion))
 systemPyCurlPath = ''
 try:
-    systemPyCurlPath = os.popen(pyInterpreter + ' -c "import os; import pycurl; print(os.path.abspath(pycurl.__file__))').strip()
+    fd = os.popen(pyInterpreter + ' -c "import os; import pycurl; print(os.path.abspath(pycurl.__file__))')
+    systemPyCurlPath = fd.read().strip()
+    fd.close()
 except Exception as e:
     printExc(str(e))
 
