@@ -10,6 +10,9 @@ a = lambda d: d.decode('utf-8') if IS_PY3 else str(d)
 if IS_PY3: from urllib import request
 else: import urllib2 as request
 
+pyInterpreter = os.environ['_']
+if not pyInterpreter: pyInterpreter = python
+
 def getHTML(url):
     response = request.urlopen(url)
     html = a(response.read())
@@ -39,11 +42,18 @@ if not os.path.isdir(sitePackagesPath):
 printDBG("sitePackagesPath %s" % sitePackagesPath)
 expectedPyCurlVersion = 20211122
 acctionNeededBeforeInstall = 'NONE'
-systemPyCurlPath = sitePackagesPath + '/pycurl.so'
 localPyCurlPath = os.path.join(INSTALL_BASE, 'usr/lib/%s/site-packages/pycurl.so' % (pyVersion))
+systemPyCurlPath = ''
+try:
+    systemPyCurlPath = os.popen(pyInterpreter + ' -c "import os; import pycurl; print(os.path.abspath(pycurl.__file__))').strip()
+except Exception as e:
+    printExc(str(e))
+
+if not systemPyCurlPath.startswith('/'):
+    systemPyCurlPath = sitePackagesPath + '/pycurl.so'
 
 if os.path.isfile(systemPyCurlPath) and not os.path.islink(systemPyCurlPath):
-    ret = os.system('python -c "import sys; import pycurl; test=pycurl.E2IPLAYER_VERSION_NUM == ' + str(expectedPyCurlVersion) + '; sys.exit(0 if test else -1);"')
+    ret = os.system(pyInterpreter + ' -c "import sys; import pycurl; test=pycurl.E2IPLAYER_VERSION_NUM == ' + str(expectedPyCurlVersion) + '; sys.exit(0 if test else -1);"')
     if ret == 0:
         # same version but by copy
         acctionNeededBeforeInstall = "REMOVE_FILE"
