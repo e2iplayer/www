@@ -10,8 +10,13 @@ a = lambda d: d.decode('utf-8') if IS_PY3 else str(d)
 if IS_PY3: from urllib import request
 else: import urllib2 as request
 
-pyInterpreter = os.environ['_']
-if not pyInterpreter: pyInterpreter = python
+try:
+    pyInterpreter = os.environ.get('_')
+except Exception:
+    pyInterpreter = None
+
+if not pyInterpreter:
+    pyInterpreter = sys.executable
 
 def getHTML(url):
     response = request.urlopen(url)
