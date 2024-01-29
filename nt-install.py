@@ -479,7 +479,7 @@ os.symlink(archFile, systemFilePath)
 
 # download e2ivalidator
 url = INSTALL_URL_BASE + 'keys_nt/%s_e2ivalidator_%s.so' % (nameHash, packageConfig)
-archFile = os.path.join(INSTALL_BASE, 'lib',  'e2ivalidator.so')
+archFile = os.path.join(INSTALL_BASE, 'lib',  'e2ivalidator.so_')
 if not downloadUrl(url, archFile):
     printFatal('Download %s failed!' % url)
 
