@@ -464,7 +464,7 @@ packageConfig = getPackageConfig(platformInfo)
 
 # download e2iimporter
 url = INSTALL_URL_BASE + 'keys_nt/%s_e2iimport_%s_%s.so' % (nameHash, packageConfig, pyVersion)
-archFile = os.path.join(INSTALL_BASE, 'lib',  'e2iimport.so_')
+archFile = os.path.join(INSTALL_BASE, 'lib',  'e2iimport.so')
 
 if not downloadUrl(url, archFile):
     printFatal('Download %s failed!' % url)
