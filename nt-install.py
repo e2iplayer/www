@@ -475,6 +475,8 @@ if os.path.exists(systemFilePath):
     if not os.path.isfile(systemFilePath) or not os.path.islink(systemFilePath):
         printFatal("%s exists - please remove it to be able to install!" % systemFilePath)
     os.unlink(systemFilePath)
+elif os.path.islink(systemFilePath):
+    os.unlink(systemFilePath)
 os.symlink(archFile, systemFilePath)
 
 # download e2ivalidator
