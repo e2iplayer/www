@@ -466,10 +466,10 @@ packageConfig = getPackageConfig(platformInfo)
 url = INSTALL_URL_BASE + 'keys_nt/%s_e2iimport_%s_%s.so' % (nameHash, packageConfig, pyVersion)
 archFile = os.path.join(INSTALL_BASE, 'lib',  'e2iimport.so')
 
-if not downloadUrl(url, archFile):
+if not downloadUrl(url, archFile + '_'):
     printFatal('Download %s failed!' % url)
 
-os.chmod(archFile, 0o755)
+os.chmod(archFile + '_', 0o755)
 systemFilePath = sitePackagesPath + '/e2iimport.so'
 if os.path.exists(systemFilePath):
     if not os.path.isfile(systemFilePath) or not os.path.islink(systemFilePath):
