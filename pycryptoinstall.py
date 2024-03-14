@@ -70,5 +70,5 @@ if ask(msg):
         else:
             printMSG('Done. pycrypto installed correctly.')
     except Exception as e:
-        printFatal('Installed pycrypto is NOT working correctly! Crypto can not be imported -> %r' % e
+        printFatal('Installed pycrypto is NOT working correctly! Crypto can not be imported -> %r' % e)
 

@@ -64,5 +64,5 @@ if ask(msg):
         else:
             printMSG('Done. pywidevine installed correctly.')
     except Exception as e:
-        printFatal('Installed pywidevine is NOT working correctly! pywidevine can not be imported -> %r' % e
+        printFatal('Installed pywidevine is NOT working correctly! pywidevine can not be imported -> %r' % e)
 
