@@ -47,7 +47,8 @@ if ask(msg):
             with open(finallLocation, 'wb') as o:
                 o.write(i.read())
         printMSG('Done. pywidevine installed correctly.')
-    except Exception:
+    except Exception as e:
+        printFatal('Instalation failed!\n%r' % e)
     finally:
         os.remove(out)
 
