@@ -43,7 +43,7 @@ msg = 'DRM certificate ready to install.\nDo you want to proceed?'
 if ask(msg):
     # remove old version
     try:
-        with open(out, 'wb') as i:
+        with open(out, 'rb') as i:
             with open(finallLocation, 'wb') as o:
                 o.write(i.read())
         printMSG('Done. pywidevine installed correctly.')
