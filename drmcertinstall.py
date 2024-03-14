@@ -38,6 +38,7 @@ if os.path.isfile(finallLocation):
     msg = "DRM certificate: '%s' already exists. Do you want to overwrite it?" % finallLocation
     if not ask(msg):
         printMSG('Installation cancelled.')
+        sys.exit(0)
 
 msg = 'DRM certificate ready to install.\nDo you want to proceed?'
 if ask(msg):
