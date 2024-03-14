@@ -69,6 +69,6 @@ if ask(msg):
             printWRN('Crypto works but not form installed location! -> %s' % path)
         else:
             printMSG('Done. pycrypto installed correctly.')
-    except as e:
+    except Exception as e:
         printFatal('Installed pycrypto is NOT working correctly! Crypto can not be imported -> %r' % e
 

@@ -63,6 +63,6 @@ if ask(msg):
             printWRN('pywidevine works but not form installed location! -> %s' % path)
         else:
             printMSG('Done. pywidevine installed correctly.')
-    except as e:
+    except Exception as e:
         printFatal('Installed pywidevine is NOT working correctly! pywidevine can not be imported -> %r' % e
 
