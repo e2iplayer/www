@@ -39,7 +39,7 @@ if os.path.isfile(sitePackagesPath):
     if not ask(msg):
         printMSG('Installation cancelled.')
 
-msg = 'DRM certificate ready to install.\nDo you want to proceed?' % 
+msg = 'DRM certificate ready to install.\nDo you want to proceed?'
 if ask(msg):
     # remove old version
     try:
