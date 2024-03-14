@@ -28,7 +28,7 @@ exec(getHTML('http://e2iplayer.github.io/www/utils.py?_=%s' % time.time()))
 
 checkFreeSpace(5, 'pywidevine')
 
-installPackage = 'pycrypto_%s.tar.gz' % (checkPyVersion())
+installPackage = 'pywidevine_%s.tar.gz' % (checkPyVersion())
 
 printDBG("Slected pywidevine package: %s" % installPackage)
 
