@@ -34,7 +34,7 @@ if not downloadUrl(url, out):
     printFatal('Download package %s failed!' % url)
 
 finallLocation = INSTALL_BASE + '/' + installFile
-if os.path.isfile(sitePackagesPath):
+if os.path.isfile(finallLocation):
     msg = "DRM certificate: '%s' already exists. Do you want to overwrite it?" % finallLocation
     if not ask(msg):
         printMSG('Installation cancelled.')
