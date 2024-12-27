@@ -28,7 +28,8 @@ exec(getHTML('http://e2iplayer.github.io/www/utils.py?_=%s' % time.time()))
 
 checkFreeSpace(5, 'pywidevine')
 
-installPackage = 'pywidevine_%s.tar.gz' % (checkPyVersion())
+pyVersion = checkPyVersion()
+installPackage = 'pywidevine_%s.tar.gz' % (pyVersion)
 
 printDBG("Slected pywidevine package: %s" % installPackage)
 

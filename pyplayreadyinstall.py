@@ -28,7 +28,8 @@ exec(getHTML('http://e2iplayer.github.io/www/utils.py?_=%s' % time.time()))
 
 checkFreeSpace(5, 'pyplayready')
 
-installPackage = 'pyplayready_%s.tar.gz' % (checkPyVersion())
+pyVersion = checkPyVersion()
+installPackage = 'pyplayready_%s.tar.gz' % (pyVersion)
 
 printDBG("Slected pyplayready package: %s" % installPackage)
 
