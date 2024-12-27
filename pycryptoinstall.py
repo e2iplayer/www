@@ -55,7 +55,7 @@ if ask(msg):
 
     # check if pycrypto is working
     try:
-        sys.path.insert(0, '/iptvplayer_rootfs/usr/lib/python%d.%d/site-packages' % (sys.version_info[0], sys.version_info[1]))
+        sys.path.insert(0, '%s/usr/lib/%s/site-packages' % (INSTALL_BASE, pyVersion))
         from Crypto.Random import get_random_bytes 
         from Crypto.Util import Padding
         from Crypto.PublicKey import RSA

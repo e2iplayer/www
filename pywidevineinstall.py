@@ -53,10 +53,9 @@ if ask(msg):
 
     os.system('rm -f /tmp/%s' % installPackage)
 
-    
     # check if pywidevine is working
     try:
-        sys.path.insert(0, '/iptvplayer_rootfs/usr/lib/python%d.%d/site-packages' % (sys.version_info[0], sys.version_info[1]))
+        sys.path.insert(0, '%s/usr/lib/%s/site-packages' % (INSTALL_BASE, pyVersion))
         from pywidevine.cdm import Cdm
         from pywidevine.device import Device
         from pywidevine.pssh import PSSH
