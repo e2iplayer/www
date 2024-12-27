@@ -41,6 +41,10 @@ if not downloadUrl(url, out):
 msg = 'Package %s ready to install.\nDo you want to proceed?' % installPackage
 if ask(msg):
     # remove old version
+    removeCmdBase = 'rm -rf %s/usr/lib/%s/site-packages/' % (INSTALL_BASE, pyVersion)
+    for item in ('pywidevine', 'google'):
+        os.system(removeCmdBase + item)
+
     os.system('rm -rf %s/pywidevine/' % INSTALL_BASE)
 
     ret = os.system("mkdir -p %s && tar -xvf /tmp/%s -C %s " % (INSTALL_BASE, installPackage, INSTALL_BASE))

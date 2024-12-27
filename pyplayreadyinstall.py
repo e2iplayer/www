@@ -41,7 +41,9 @@ if not downloadUrl(url, out):
 msg = 'Package %s ready to install.\nDo you want to proceed?' % installPackage
 if ask(msg):
     # remove old version
-    os.system('rm -rf %s/pyplayready/' % INSTALL_BASE)
+    removeCmdBase = 'rm -rf %s/usr/lib/%s/site-packages/' % (INSTALL_BASE, pyVersion)
+    for item in ('pyplayready', 'construct', 'ecpy'):
+        os.system(removeCmdBase + item)
 
     ret = os.system("mkdir -p %s && tar -xvf /tmp/%s -C %s " % (INSTALL_BASE, installPackage, INSTALL_BASE))
     if ret not in [None, 0]:

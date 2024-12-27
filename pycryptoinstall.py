@@ -45,7 +45,7 @@ if not downloadUrl(url, out):
 msg = 'Package %s ready to install.\nDo you want to proceed?' % installPackage
 if ask(msg):
     # remove old version
-    os.system('rm -rf %s/pycrypto/' % INSTALL_BASE)
+    os.system('rm -rf %s/usr/lib/%s/site-packages/Crypto/' % (INSTALL_BASE, pyVersion))
 
     ret = os.system("mkdir -p %s && tar -xvf /tmp/%s -C %s " % (INSTALL_BASE, installPackage, INSTALL_BASE))
     if ret not in [None, 0]:
