@@ -32,7 +32,7 @@ pyVersion = checkPyVersion()
 platformInfo = GetPlatformInfo()
 
 packageConfig = '%s_%s' % (pyVersion, getPackageConfig(platformInfo))
-installPackage = 'pycurl_%s.tar.gz' % (packageConfig)
+installPackage = 'e2ipycurl_%s.tar.gz' % (packageConfig)
 
 printDBG("Slected pycurl package: %s" % installPackage)
 
@@ -45,9 +45,21 @@ if not os.path.isdir(sitePackagesPath):
     raise Exception('Python site-packages directory "%s" does not exists!\nPlease report this via e-mail: e2iplayer@yahoo.com' % sitePackagesPath)
 
 printDBG("sitePackagesPath %s" % sitePackagesPath)
-expectedPyCurlVersion = 20211122
+expectedPyCurlVersion = 20250116
 acctionNeededBeforeInstall = 'NONE'
-localPyCurlPath = os.path.join(INSTALL_BASE, 'usr/lib/%s/site-packages/pycurl.so' % (pyVersion))
+localE2iPyCurlPath = os.path.join(INSTALL_BASE, 'usr/lib/%s/site-packages/e2ipycurl.so' % (pyVersion))
+systemE2iPyCurlPath = ''
+try:
+    fd = os.popen(pyInterpreter + ' -c "import os; import e2ipycurl; print(os.path.abspath(e2ipycurl.__file__))"')
+    systemE2iPyCurlPath = fd.read().strip()
+    fd.close()
+except Exception as e:
+    printExc(str(e))
+
+if not systemE2iPyCurlPath.startswith('/'):
+    systemE2iPyCurlPath = sitePackagesPath + '/e2ipycurl.so'
+
+# real PyCurl
 systemPyCurlPath = ''
 try:
     fd = os.popen(pyInterpreter + ' -c "import os; import pycurl; print(os.path.abspath(pycurl.__file__))"')
@@ -56,21 +68,18 @@ try:
 except Exception as e:
     printExc(str(e))
 
-if not systemPyCurlPath.startswith('/'):
-    systemPyCurlPath = sitePackagesPath + '/pycurl.so'
-
-if os.path.isfile(systemPyCurlPath) and not os.path.islink(systemPyCurlPath):
-    ret = os.system(pyInterpreter + ' -c "import sys; import pycurl; test=pycurl.E2IPLAYER_VERSION_NUM == ' + str(expectedPyCurlVersion) + '; sys.exit(0 if test else -1);"')
+if os.path.isfile(systemE2iPyCurlPath) and not os.path.islink(systemE2iPyCurlPath):
+    ret = os.system(pyInterpreter + ' -c "import sys; import e2ipycurl; test=e2ipycurl.E2IPLAYER_VERSION_NUM == ' + str(expectedPyCurlVersion) + '; sys.exit(0 if test else -1);"')
     if ret == 0:
         # same version but by copy
         acctionNeededBeforeInstall = "REMOVE_FILE"
     else:
         acctionNeededBeforeInstall = "BACKUP_FILE"
-elif os.path.islink(systemPyCurlPath):
-    # systemPyCurlPath is symbolic link
-    linkTarget = os.path.realpath(systemPyCurlPath)
-    if linkTarget != os.path.realpath(localPyCurlPath):
-        printFatal('Error!!! Your %s is symbolc link to %s!\nThis can not be handled by this installer.\nYou can remove it by hand and try again.\n' % (systemPyCurlPath, linkTarget))
+elif os.path.islink(systemE2iPyCurlPath):
+    # systemE2iPyCurlPath is symbolic link
+    linkTarget = os.path.realpath(systemE2iPyCurlPath)
+    if linkTarget != os.path.realpath(localE2iPyCurlPath):
+        printFatal('Error!!! Your %s is symbolc link to %s!\nThis can not be handled by this installer.\nYou can remove it by hand and try again.\n' % (systemE2iPyCurlPath, linkTarget))
     else:
         acctionNeededBeforeInstall = "REMOVE_SYMBOLIC_LINK"
 
@@ -83,7 +92,7 @@ ret = os.system('rm -f /tmp/%s' % installPackage)
 if ret not in [None, 0]:
     printFatal('Removing old downloaded package /tmp/%s failed! Return code: %s' % (installPackage, ret))
 
-url = "https://www.e2iplayer.gitlab.io/resources/packages/pycurl/%s" % installPackage
+url = "https://www.e2iplayer.gitlab.io/resources/packages/e2ipycurl/%s" % installPackage
 out = '/tmp/' + installPackage
 
 if not downloadUrl(url, out):
@@ -91,6 +100,25 @@ if not downloadUrl(url, out):
 
 msg = 'Package %s ready to install.\nDo you want to proceed?' % installPackage
 if ask(msg):
+    # restore previously moved pycurl
+    if os.path.islink(systemPyCurlPath):
+        linkTarget = os.path.realpath(systemPyCurlPath)
+        localPyCurlPath = localE2iPyCurlPath.replace('/e2ipycurl.so', '/pycurl.so')
+        if linkTarget == os.path.realpath(localPyCurlPath):
+            maxTimestamp = 0
+            toRestore = ''
+            directory = os.path.dirname(systemPyCurlPath)
+            for f in os.listdir(directory):
+                if 'pycurl.so_backup_' not in f: continue
+                timestamp = float(r.split('_', 1)[-1])
+                if timestamp > maxTimestamp:
+                    maxTimestamp = timestamp
+                    toRestore = os.path.join(directory, f)
+
+            os.unlink(systemPyCurlPath)
+            if toRestore:
+                os.rename(toRestore, systemPyCurlPath)
+
     # remove old version
     os.system('(cd %s/lib/; rm -f libcurl.so* libwolfssl.so* libnghttp2.so* libbrotlidec.so* libbrotlicommon.so*)' % INSTALL_BASE)
 
@@ -101,18 +129,18 @@ if ask(msg):
     os.system('rm -f /tmp/%s' % installPackage)
 
     if acctionNeededBeforeInstall in ['REMOVE_FILE', 'REMOVE_SYMBOLIC_LINK']:
-        os.unlink(systemPyCurlPath)
+        os.unlink(systemE2iPyCurlPath)
     elif acctionNeededBeforeInstall == 'BACKUP_FILE':
-        backup = '%s_backup_%s' % (systemPyCurlPath, str(time.time()))
-        os.rename(systemPyCurlPath, backup)
+        backup = '%s_backup_%s' % (systemE2iPyCurlPath, str(time.time()))
+        os.rename(systemE2iPyCurlPath, backup)
 
     # create symlink
-    os.symlink(localPyCurlPath, systemPyCurlPath)
+    os.symlink(localE2iPyCurlPath, systemE2iPyCurlPath)
 
     # check if pycurl is working
-    import pycurl
-    if pycurl.E2IPLAYER_VERSION_NUM >= expectedPyCurlVersion:
-        printMSG('Done. PyCurl version "%s" installed correctly.\nPlease remember to restart your Enigma2.' % (pycurl.E2IPLAYER_VERSION_NUM))
+    import e2ipycurl
+    if e2ipycurl.E2IPLAYER_VERSION_NUM >= expectedPyCurlVersion:
+        printMSG('Done. PyCurl version "%s" installed correctly.\nPlease remember to restart your Enigma2.' % (e2ipycurl.E2IPLAYER_VERSION_NUM))
     else:
-        printFatal('Installed PyCurl is NOT working correctly! It report diffrent version "%s" then expected "%s"' % (pycurl.E2IPLAYER_VERSION_NUM, expectedPyCurlVersion))
+        printFatal('Installed PyCurl is NOT working correctly! It report diffrent version "%s" then expected "%s"' % (e2ipycurl.E2IPLAYER_VERSION_NUM, expectedPyCurlVersion))
 
