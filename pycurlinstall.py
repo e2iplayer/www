@@ -110,7 +110,7 @@ if ask(msg):
             directory = os.path.dirname(systemPyCurlPath)
             for f in os.listdir(directory):
                 if 'pycurl.so_backup_' not in f: continue
-                timestamp = float(f.split('_', 1)[-1])
+                timestamp = float(f.rsplit('_', 1)[-1])
                 if timestamp > maxTimestamp:
                     maxTimestamp = timestamp
                     toRestore = os.path.join(directory, f)
