@@ -431,12 +431,12 @@ def GetPlatformInfo():
         info['ld_path'] = ldPath
         info['libs_paths'] = libsPaths
 
-        glibcVersion = re.search("libc\-([0-9]+)\.([0-9]+)\.", info['libc_path'])
+        glibcVersion = re.search(r"libc\-([0-9]+)\.([0-9]+)\.", info['libc_path'])
         if not glibcVersion:
             file = os.popen('%s --version 2>&1' % info['libc_path'])
             glibcVersion = file.read()
             file.close()
-            glibcVersion = re.search("stable release version ([0-9]+)\.([0-9]+)", glibcVersion)
+            glibcVersion = re.search(r"stable release version ([0-9]+)\.([0-9]+)", glibcVersion)
 
         glibcVersion = int(glibcVersion.group(1)) * 100 + int(glibcVersion.group(2))
         info['libc_ver'] = glibcVersion
