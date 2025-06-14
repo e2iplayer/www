@@ -40,7 +40,7 @@ if LOCAL_EXISTS:
     if os.environ.get("FORCE_LIBXML2_INSTALL") != '1':
         sys.exit(0)
 
-if LOCAL_PACKAGE_CONFIG:
+if '_aarch64_' in LOCAL_PACKAGE_CONFIG:
     LOCAL_LIB_NAME = 'libxml2.so.2.9.4'
 else:
     LOCAL_LIB_NAME = 'libxml2.so.2.9.0'
