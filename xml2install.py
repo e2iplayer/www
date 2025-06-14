@@ -31,7 +31,7 @@ for loc in ('/usr/lib/', '/lib/'):
     loc += 'libxml2.so.2'
     if not os.path.exists(loc):
         continue
-    if 'libxml2.so.2.' in os.readlink(loc)
+    if 'libxml2.so.2.' in os.readlink(loc):
         LOCAL_EXISTS = True
         break
 
