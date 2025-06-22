@@ -536,6 +536,30 @@ def checkPyVersion():
         printFatal('Your python version "%s" is not supported!' % pyVersion)
     return pyVersion
 
+def fallbackDownloadUrl(url, output_path, buffer_size=4096):
+    printMSG('Fallback downloading "%s"' % url.split('?', 1)[0], '{0}', bcolors.ENDC)
+    ret = False
+    response = None
+    try:
+        global IS_PY3
+        if IS_PY3: from urllib import request
+        else: import urllib2 as request
+
+        response = request.urlopen(url)
+        with open(output_path, 'wb') as f:
+            while True:
+                chunk = response.read(buffer_size)
+                if not chunk:
+                    break
+                f.write(chunk)
+        ret = True
+    except Exception as e:
+        printWRN("Download failed %s: " % e, '{0}')
+    finally:
+        if response:
+            response.close()
+    return ret
+
 def downloadUrl(url, out):
     printMSG('Downloading "%s"' % url.split('?', 1)[0], '{0}', bcolors.ENDC)
 
@@ -585,6 +609,9 @@ def downloadUrl(url, out):
             printDBG(e)
     if errorCodes:
         printWRN("Download failed %s: %s" % (', '.join(errorCodes), ', '.join(errorMsg)), '{0}')
+
+    if not wget:
+        wget = fallbackDownloadUrl(url, out)
     return wget
 
 def checkFreeSpace(requiredFreeSpaceMB, packageName, allowForce=True, ):
