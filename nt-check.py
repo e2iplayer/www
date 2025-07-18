@@ -49,5 +49,5 @@ os.system(e2isec + ' getserial > ' + e2isec + '.out')
 with open(e2isec + '.out') as f:
     serial = f.read().strip()
 
-printMSG('\n'.join(["PLATFORM INFO", 'uname:\t' + uname, 'config:\t' + packageConfig, 'python:\t' + pyVersion, 'serial:\t' + serial 'mac:\t' + macAddr, 'mac2:\t' + macAddr2]))
+printMSG('\n'.join(["PLATFORM INFO", 'uname:\t' + uname, 'config:\t' + packageConfig, 'python:\t' + pyVersion, 'serial:\t' + serial, 'mac:\t' + macAddr, 'mac2:\t' + macAddr2]))
 
