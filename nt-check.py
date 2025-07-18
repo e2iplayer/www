@@ -35,15 +35,19 @@ os.chmod(e2isec, 0o755)
 
 os.system(e2isec + ' getmac > ' + e2isec + '.out')
 with open(e2isec + '.out') as f:
-    macAddr = f.read()
+    macAddr = f.read().strip()
 
 os.system(e2isec + ' getmac2 > ' + e2isec + '.out')
 with open(e2isec + '.out') as f:
-    macAddr2 = f.read()
+    macAddr2 = f.read().strip()
 
 os.system(e2isec + ' uname > ' + e2isec + '.out')
 with open(e2isec + '.out') as f:
-    uname = f.read()
+    uname = f.read().strip()
 
-printMSG('\n'.join(["PLATFORM INFO", 'uname:\t' + uname, 'config:\t' + packageConfig, 'python:\t' + pyVersion, 'mac:\t' + macAddr, 'mac2:\t' + macAddr2]))
+os.system(e2isec + ' getserial > ' + e2isec + '.out')
+with open(e2isec + '.out') as f:
+    serial = f.read().strip()
+
+printMSG('\n'.join(["PLATFORM INFO", 'uname:\t' + uname, 'config:\t' + packageConfig, 'python:\t' + pyVersion, 'serial:\t' + serial 'mac:\t' + macAddr, 'mac2:\t' + macAddr2]))
 
