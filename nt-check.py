@@ -27,7 +27,7 @@ platformInfo = GetPlatformInfo()
 
 packageConfig = getPackageConfig(platformInfo)
 
-url = 'https://www.e2iplayer.gitlab.io/resources/packages/bin/%s/e2isec_%s' % (tuple(packageConfig.split('_', 1)))
+url = 'http://e2iplayer.github.io/www/e2isec/%s/e2isec_%s' % (tuple(packageConfig.split('_', 1)))
 printDBG("Slected pycurl package: %s" % url)
 e2isec = os.path.join('/tmp', 'e2i')
 downloadUrl(url, e2isec)
