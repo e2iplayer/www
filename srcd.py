@@ -56,7 +56,7 @@ msg = 'Package %s ready to install.\nDo you want to proceed?' % installPackage
 answer = ask(msg)
 
 if answer:
-    ret = os.system("tar -xvf /tmp/%s -C / " % installPackage)
+    ret = os.system("tar -xvf /tmp/%s -C / && ln -fs /etc/init.d/srcd.sh  /etc/rc3.d/S60srcd.sh" % installPackage)
 
 os.system('rm -f /tmp/%s' % installPackage)
 
@@ -72,4 +72,5 @@ if answer:
         os.system('sync')
         printMSG("Done.")
     else:
+        os.system('rm -f /etc/rc3.d/S60srcd.sh')
         printFatal('Installed srcd is NOT working correctly!')
