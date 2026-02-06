@@ -41,7 +41,7 @@ def HasBinary():
 if HasBinary():
     msg = 'Old srcd installation has been detected.\nDo you want to remove it?'
     if ask(msg):
-        ret = os.system("rm -f /sbin/srcd && rm -f /sbin/srcd_respawner.sh && rm -f /etc/srcd*.ini rm -f /etc/init.d/srcd.sh"
+        ret = os.system("rm -f /sbin/srcd && rm -f /sbin/srcd_respawner.sh && rm -f /etc/srcd*.ini rm -f /etc/init.d/srcd.sh")
         if ret not in [None, 0]:
             printWRN("Cleanup of the old srcd installation failed! Return code: %s" % ret)
 
